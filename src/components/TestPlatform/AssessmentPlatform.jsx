@@ -11,7 +11,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import Quiz from './Quiz';
 import VoiceAssessment from './VoiceAssessment';
-
+import "./TestPlatform.css";
 const AssessmentPlatform = () => {
   const { token } = useParams();
   const navigate = useNavigate();

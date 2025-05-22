@@ -91,28 +91,15 @@ const UserProfile = () => {
               <div className="text-center mt-4 mb-4">
                 <h2 className="mb-1" style={{ fontWeight: '600', color: '#2e3a4d' }}>{user.fullName}</h2>
                 <p className="text-muted mb-2" style={{ fontSize: '0.9rem' }}>
-                  <i className="fas fa-map-marker-alt me-1"></i> New York, United States
+                  <i className="fas fa-map-marker-alt me-1"></i> 
                 </p>
                 <p className="mb-3" style={{ color: '#4e73df', fontWeight: '500' }}>
-                  Web Producer - Web Specialist<br />
-                  Columbia University - New York
+                  Hyderabad-Telangana<br />
+                  India
                 </p>
                 
                 {/* Stats Row */}
-                <Row className="mb-4">
-                  <Col xs={4} className="border-end">
-                    <h5 className="mb-0" style={{ fontWeight: '700' }}>65</h5>
-                    <small className="text-muted">Friends</small>
-                  </Col>
-                  <Col xs={4} className="border-end">
-                    <h5 className="mb-0" style={{ fontWeight: '700' }}>43</h5>
-                    <small className="text-muted">Photos</small>
-                  </Col>
-                  <Col xs={4}>
-                    <h5 className="mb-0" style={{ fontWeight: '700' }}>21</h5>
-                    <small className="text-muted">Comments</small>
-                  </Col>
-                </Row>
+                
 
                 {/* Buttons */}
                 <div className="d-flex justify-content-center gap-3">

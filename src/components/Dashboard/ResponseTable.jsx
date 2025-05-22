@@ -35,7 +35,7 @@ import { faGoogle, faMicrosoft} from '@fortawesome/free-brands-svg-icons';
 import { toast } from "react-toastify";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
+import "./UploadDocuments.css";
 
 function ResponseTable({ data, duplicateCount  }) {
 

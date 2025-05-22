@@ -5,7 +5,7 @@ import { Button, Card, ProgressBar, Alert, Spinner } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrophone, faStop, faCheck,faTimes, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import RecordRTC from 'recordrtc';
-
+import "./TestPlatform.css";
 const VoiceAssessment = ({ onComplete }) => {
   const { token } = useParams();
   const [questions, setQuestions] = useState([]);
@@ -137,7 +137,7 @@ const handleTimeout = async () => {
         
         const response = await axios.get(
           `http://localhost:5000/api/assessment-questions/${token}`,
-          { timeout: 10000 } // 10 second timeout
+        
         );
         
         // Validate and format questions
@@ -248,7 +248,7 @@ const handleTimeout = async () => {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setUploadProgress(progress);
         },
-        timeout: 30000
+       
       });
       
       setRecordedAnswers(prev => [

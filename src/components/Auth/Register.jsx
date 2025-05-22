@@ -36,16 +36,13 @@ const Register = () => {
 
 
   return (
-    <div className="min-vh-100 w-100 d-flex align-items-center justify-content-center p-4" style={{background: 'linear-gradient(135deg,rgb(255, 151, 151),rgb(175, 154, 227), #45b7d1)'}}>
-      <div className="card bg-white bg-opacity-10 shadow-lg rounded-4 backdrop-light" style={{maxWidth: '400px'}}>
-        <div className="card-body p-5">
-          <h2 className="card-title text-center mb-4">
-          Register
-          </h2>
+      <div className="container">
+      <div className="auth-form bg-white">
+        <div className="text-center mb-4">
+          <h2 className="fw-bold">Create your account</h2>
+          <p className="text-muted">Start your 14-day free trial - no credit card required</p>
 
-          <div className="d-flex justify-content-center align-items-center mb-4">
-        
-          </div>
+
 
           <form onSubmit={handleSubmit}>
             <div className="mb-3">
@@ -138,8 +135,7 @@ const Register = () => {
           </div>
         </div>
       </div>
-      <div className="position-absolute top-0 start-0 bg-pink rounded-circle filter-blur opacity-25" style={{width: '256px', height: '256px', transform: 'translate(-50%, -50%)'}}></div>
-      <div className="position-absolute bottom-0 end-0 bg-info rounded-circle filter-blur opacity-25" style={{width: '256px', height: '256px', transform: 'translate(50%, 50%)'}}></div>
+     
     </div>
   );
 }

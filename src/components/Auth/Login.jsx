@@ -24,20 +24,20 @@ const Login = () => {
     }
   };
   return (
-    <div className="min-vh-100 w-100 d-flex align-items-center justify-content-center p-4" style={{background: 'linear-gradient(135deg, #ff6b6b,rgb(175, 160, 215), #45b7d1)'}}>
-      <div className="card bg-white bg-opacity-10 shadow-lg rounded-4 backdrop-blur" style={{maxWidth: '400px'}}>
-        <div className="card-body p-5">
-          <h2 className="card-title text-center mb-4 text-black">
-       Login
-          </h2>
-
+<div className="container">
+      <div className="auth-form bg-white">
+        <div className="text-center mb-4">
+        <h2 className="fw-bold">Welcome back</h2>
+          <p className="text-muted">Sign in to your TalentTrack ATS account</p>
           <div className=" d-flex justify-content-center align-items-center mb-4">
            
           </div>
 
           <form onSubmit={handleSubmit}>
             <div className="mb-3">
+                <div className="d-flex justify-content-between">
               <label htmlFor="email" className="form-label text-black">Email</label>
+              </div>
               <input
                 type="email"
                 className="form-control bg-white bg-opacity-50"
@@ -48,8 +48,10 @@ const Login = () => {
                 required
               />
             </div>
-            <div className="mb-3">  
+            <div className="mb-3"> 
+               <div className="d-flex justify-content-between">
               <label htmlFor="password" className="form-label text-black">Password</label>
+              </div> 
               <input
                 type="password"
                 className="form-control bg-white bg-opacity-50"
@@ -79,8 +81,7 @@ const Login = () => {
           </div>
         </div>
       </div>
-      <div className="position-absolute top-0 start-0 bg-pink rounded-circle filter-blur opacity-25" style={{width: '256px', height: '256px', transform: 'translate(-50%, -50%)'}}></div>
-      <div className="position-absolute bottom-0 end-0 bg-info rounded-circle filter-blur opacity-25" style={{width: '256px', height: '256px', transform: 'translate(50%, 50%)'}}></div>
+      
     </div>
   );
 }

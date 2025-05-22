@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate,useLocation } from "react-router-dom";
-import { FaUserCircle } from "react-icons/fa"; // Profile Icon
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { FaUserCircle } from "react-icons/fa";
 import axios from "axios";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faSearch,
   faBell,
@@ -12,13 +12,12 @@ import {
   faRotateLeft,
   faUpload,
   faComment,
-} from "@fortawesome/free-solid-svg-icons"
-
+} from "@fortawesome/free-solid-svg-icons";
 
 function Header({ onResponseSubmit }) {
-  const location = useLocation()
-  const currentPath = location.pathname
-  const [responseInput, setResponseInput] = useState("")
+  const location = useLocation();
+  const currentPath = location.pathname;
+  const [responseInput, setResponseInput] = useState("");
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -36,22 +35,26 @@ function Header({ onResponseSubmit }) {
   if (!user) return <div>Loading...</div>;
 
   const handleResponseSubmit = (e) => {
-    e.preventDefault()
+    e.preventDefault();
     if (responseInput.trim()) {
-      onResponseSubmit(responseInput)
-      setResponseInput("")
+      onResponseSubmit(responseInput);
+      setResponseInput("");
     }
-  }
+  };
 
   return (
     <div className="dashboard-header">
       <div className="d-flex flex-column w-100">
         {/* Top purple header */}
         <div
-          className="px-4 py-3 d-flex align-items-center  justify-content-between"
+          className="px-4 py-3 d-flex align-items-center"
           style={{ backgroundColor: "#8B5CF6" }}
         >
-          <div className="d-flex  gap-2">
+          {/* Empty div to balance the flex layout */}
+          <div className="flex-grow-1"></div>
+          
+          {/* Centered Navigation Links */}
+          <div className="d-flex gap-2 justify-content-center">
             <Link
               to="/dashboard/candidates"
               className={`btn px-3 py-2 fw-medium ${currentPath === "/dashboard/candidates" ? "active-nav" : "inactive-nav"}`}
@@ -64,31 +67,31 @@ function Header({ onResponseSubmit }) {
             >
               Response
             </Link>
-            
             <Link
               to="/dashboard/upload"
               className={`btn px-3 py-2 fw-medium ${currentPath === "/dashboard/upload" ? "active-nav" : "inactive-nav"}`}
             >
               Upload Documents
             </Link>
-            {/* Dynamic Dashboard Link */}
-          
           </div>
-          {/* Profile Section - Standalone Button */}
-          <Link
-          to={user.isAdmin ? "/dashboard/admin" : "/dashboard/user"}
-          className="btn btn-light d-flex align-items-center px-3 py-2 ms-auto" 
-          style={{
-            borderRadius: "20px",
-            fontWeight: "500",
-            backgroundColor: "#f8f9fa", // Light grey background
-            border: "1px solid #ddd",
-            color: "#333",
-          }}// Pushed to right
-        >
-          <FaUserCircle size={24} className="me-2" />
-          {user.isAdmin ? "Admin Dashboard" : "User Profile"}
-        </Link>
+          
+          {/* Profile Section - Pushed to right */}
+          <div className="flex-grow-1 d-flex justify-content-end">
+            <Link
+              to={user.isAdmin ? "/dashboard/admin" : "/dashboard/user"}
+              className="btn btn-light d-flex align-items-center px-3 py-2"
+              style={{
+                borderRadius: "20px",
+                fontWeight: "500",
+                backgroundColor: "#f8f9fa",
+                border: "1px solid #ddd",
+                color: "#333",
+              }}
+            >
+              <FaUserCircle size={24} className="me-2" />
+              {user.isAdmin ? "Admin Dashboard" : "User Profile"}
+            </Link>
+          </div>
         </div>
 
         {/* Bottom white header with response input */}
@@ -142,8 +145,7 @@ function Header({ onResponseSubmit }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default Header
-
+export default Header;

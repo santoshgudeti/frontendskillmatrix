@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Button, Alert, Spinner } from "react-bootstrap";
 import Question from './Question';
 import Result from './Result';
-
+import "./TestPlatform.css";
 const Quiz = ({ proctored = true, onComplete }) => {
   const { token } = useParams();
   const navigate = useNavigate();

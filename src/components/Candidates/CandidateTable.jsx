@@ -27,6 +27,8 @@ import {
   
 } from "@fortawesome/free-solid-svg-icons"
 
+import '../Dashboard/UploadDocuments.css';
+
 import axios from "axios";
 import React, { useState, useEffect } from "react";
 import { Button, Modal, Form, Spinner, Alert, Dropdown } from 'react-bootstrap';

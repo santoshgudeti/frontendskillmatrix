@@ -10,7 +10,7 @@ import {
   faMinus, faTimes, faCheckCircle, faExclamationTriangle,
   faUser, faVideo, faMicrophone, faDesktop
 } from '@fortawesome/free-solid-svg-icons';
-
+import "./TestPlatform.css";
 const InterviewPlatform = () => {
   // State management
   const [recording, setRecording] = useState(false);
