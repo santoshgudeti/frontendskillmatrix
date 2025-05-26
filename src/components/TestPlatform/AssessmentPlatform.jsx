@@ -12,6 +12,7 @@ import {
 import Quiz from './Quiz';
 import VoiceAssessment from './VoiceAssessment';
 import "./TestPlatform.css";
+import { axiosInstance } from '../../axiosUtils';
 const AssessmentPlatform = () => {
   const { token } = useParams();
   const navigate = useNavigate();
@@ -52,8 +53,8 @@ const [assessmentPhase, setAssessmentPhase] = useState('mcq');
 useEffect(() => {
   const validateSession = async () => {
     try {
-      const response = await axios.get(
-        `http://localhost:5000/api/validate-assessment/${token}`
+      const response = await axiosInstance.get(
+        `/api/validate-assessment/${token}`
       );
       
       if (!response.data.valid) {
@@ -85,7 +86,7 @@ useEffect(() => {
   
     const initializeSession = async () => {
       try {
-        const response = await axios.post('http://localhost:5000/api/start-assessment-recording', { token });
+        const response = await axiosInstance.post('/api/start-assessment-recording', { token });
         setSession(response.data);
       } catch (error) {
         console.error('Error starting assessment:', error);
@@ -134,8 +135,8 @@ useEffect(() => {
   const startRecording = async () => {
     try {
 
-      const validation = await axios.get(
-        `http://localhost:5000/api/validate-assessment/${token}`
+      const validation = await axiosInstance.get(
+        `/api/validate-assessment/${token}`
       );
       
       if (!validation.data.valid) {
@@ -196,7 +197,7 @@ useEffect(() => {
         formData.append("assessmentToken", token);  // Add this line
 
         try {
-          const response = await axios.post("http://localhost:5000/upload", formData);
+          const response = await axiosInstance.post("/upload", formData);
           setRecordingId(response.data.file._id);
           return response.data.file._id;
         } catch (error) {
@@ -218,7 +219,7 @@ useEffect(() => {
 const completeAssessment = async (score) => {
   console.log("MCQ completed with score:", score);
   try {
-    const response = await axios.post('http://localhost:5000/api/complete-assessment', {
+    const response = await axiosInstance.post('/api/complete-assessment', {
       token,
       score,
     });
@@ -237,7 +238,7 @@ const completeVoiceAssessment = async () => {
   try {
     const recordingId = await stopRecording(); // Now we stop recording here
     
-    await axios.post('http://localhost:5000/api/complete-voice-assessment', { 
+    await axiosInstance.post('/api/complete-voice-assessment', { 
       token,
       recordingId // Pass recording ID when voice assessment is done
     });

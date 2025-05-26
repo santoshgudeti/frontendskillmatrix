@@ -18,7 +18,7 @@ const LandingPage = () => {
               </p>
               <div className="d-flex flex-wrap gap-3">
                 <Link to="/Register" className="btn btn-primary btn-lg px-5 py-3">
-                  Get Started Free
+                  Request for Free Trial
                 </Link>
               <a href="#features" className="btn btn-light btn-lg px-5 py-3 fw-bold">
                   Learn More
@@ -284,7 +284,7 @@ const LandingPage = () => {
           <h2 className="display-5 fw-bold mb-4">Ready to transform your recruitment process?</h2>
           <p className="lead mb-5">Join thousands of companies using Skill Matrix ATS to find and hire the best talent faster.</p>
           <Link to="/Register" className="btn btn-light btn-lg px-5 py-3 fw-bold">
-            Get Started Free
+            Request for Free Trial
           </Link>
           <p className="text-white-50 mt-3">No credit card required. Free 14-day trial.</p>
         </div>

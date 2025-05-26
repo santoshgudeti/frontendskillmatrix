@@ -7,6 +7,7 @@ import 'react-confirm-alert/src/react-confirm-alert.css'; // Import confirmation
 import { FaEdit, FaSave, FaTrash, FaPlus, FaCheck, FaTimes } from 'react-icons/fa'; // Icons
 import { Card, Table, Button, Form, Container, Row, Col } from 'react-bootstrap'; // Modern UI components
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { axiosInstance } from '../../axiosUtils';
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -27,7 +28,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/admin', { withCredentials: true });
+        const res = await axiosInstance.get('/admin', { withCredentials: true });
         setUsers(res.data.users);
       } catch (error) {
         toast.error(error.response?.data?.message || 'Failed to fetch users');
@@ -41,7 +42,7 @@ const AdminDashboard = () => {
   // Logout function should not be inside useEffect
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:5000/logout', {}, { withCredentials: true });
+      await axiosInstance.post('/logout', {}, { withCredentials: true });
       navigate('/login'); // Redirect to login page after logout
     } catch (error) {
       console.error('Logout failed:', error);
@@ -93,8 +94,8 @@ const AdminDashboard = () => {
   // Update user
   const handleUpdate = async (userId) => {
     try {
-      const res = await axios.put(
-        `http://localhost:5000/admin/update-user/${userId}`,
+      const res = await axiosInstance.put(
+        `/admin/update-user/${userId}`,
         formData,
         { withCredentials: true }
       );
@@ -116,8 +117,8 @@ const AdminDashboard = () => {
           label: 'Yes',
           onClick: async () => {
             try {
-              const res = await axios.delete(
-                `http://localhost:5000/admin/delete-user/${userId}`,
+              const res = await axiosInstance.delete(
+                `/admin/delete-user/${userId}`,
                 { withCredentials: true }
               );
               toast.success(res.data.message);
@@ -138,8 +139,8 @@ const AdminDashboard = () => {
   // Extend trial
   const handleExtendTrial = async (userId) => {
     try {
-      const res = await axios.put(
-        `http://localhost:5000/admin/extend-trial/${userId}`,
+      const res = await axiosInstance.put(
+        `/admin/extend-trial/${userId}`,
         { days: extendTrialData.days },
         { withCredentials: true }
       );

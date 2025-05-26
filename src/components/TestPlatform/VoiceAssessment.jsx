@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrophone, faStop, faCheck,faTimes, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import RecordRTC from 'recordrtc';
 import "./TestPlatform.css";
+import { axiosInstance } from '../../axiosUtils';
 const VoiceAssessment = ({ onComplete }) => {
   const { token } = useParams();
   const [questions, setQuestions] = useState([]);
@@ -65,7 +66,7 @@ const handleTimeout = async () => {
     );
 
     const submissionPromises = unanswered.map(q => 
-      axios.post('/api/submit-voice-answer', {
+      axiosInstance.post('/api/submit-voice-answer', {
         token,
         questionId: q.id,
         question: q.question,
@@ -135,8 +136,8 @@ const handleTimeout = async () => {
         setLoadingQuestions(true);
         setError(null);
         
-        const response = await axios.get(
-          `http://localhost:5000/api/assessment-questions/${token}`,
+        const response = await axiosInstance.get(
+          `/api/assessment-questions/${token}`,
         
         );
         
@@ -240,7 +241,7 @@ const handleTimeout = async () => {
       formData.append('questionId', currentQuestion.id);
       formData.append('question', currentQuestionText);
       
-      await axios.post('http://localhost:5000/api/submit-voice-answer', formData, {
+      await axiosInstance.post('/api/submit-voice-answer', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
@@ -273,7 +274,7 @@ const handleTimeout = async () => {
   const completeAssessment = async () => {
     try {
       setUploadProgress(100);
-      await axios.post('http://localhost:5000/api/complete-voice-assessment', { token });
+      await axiosInstance.post('/api/complete-voice-assessment', { token });
       
       if (onComplete) {
         onComplete();

@@ -13,15 +13,15 @@ const Navbar = () => {
             alt="SM Logo"
             className="rounded-circle img-fluid"
             style={{
-              width: "50px",
-              height: "50px",
+              width: "80px",
+              height: "80px",
               border: "2px solid black",
               boxShadow: "0 0 5px rgba(0,0,0,0.3)"
             }}
           />
         <div className="ms-2">
         <span className="fw-bold d-block  pb-0">
-          Skill Matrix
+
         </span>
       </div>
         </Link>

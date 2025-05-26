@@ -13,6 +13,7 @@ import {
   faUpload,
   faComment,
 } from "@fortawesome/free-solid-svg-icons";
+import { axiosInstance } from "../../axiosUtils";
 
 function Header({ onResponseSubmit }) {
   const location = useLocation();
@@ -23,7 +24,7 @@ function Header({ onResponseSubmit }) {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/user', { withCredentials: true });
+        const res = await axiosInstance.get('/user', { withCredentials: true });
         setUser(res.data.user);
       } catch (error) {
         console.error("Failed to fetch user details:", error);

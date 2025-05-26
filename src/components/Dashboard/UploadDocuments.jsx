@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./UploadDocuments.css";
+import { axiosInstance } from "../../axiosUtils";
 
 function UploadDocuments({ setResponseData }) {
   const navigate = useNavigate(); // React Router navigation hook
@@ -178,8 +179,8 @@ function UploadDocuments({ setResponseData }) {
       resumeFiles.forEach((file) => formData.append("resumes", file));
       formData.append("job_description", jobDescFile);
 
-      const response = await axios.post(
-        "http://localhost:5000/api/submit",
+      const response = await axiosInstance.post(
+        "/api/submit",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );

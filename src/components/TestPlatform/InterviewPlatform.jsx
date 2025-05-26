@@ -11,6 +11,7 @@ import {
   faUser, faVideo, faMicrophone, faDesktop
 } from '@fortawesome/free-solid-svg-icons';
 import "./TestPlatform.css";
+import { axiosInstance } from "../../axiosUtils";
 const InterviewPlatform = () => {
   // State management
   const [recording, setRecording] = useState(false);
@@ -187,7 +188,7 @@ const InterviewPlatform = () => {
     formData.append("screenFile", screenBlob, "screen_recording.webm");
 
     try {
-      const response = await axios.post("http://localhost:5000/upload", formData, {
+      const response = await axiosInstance.post("/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

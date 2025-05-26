@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 
 import 'bootstrap/dist/css/bootstrap.min.css'; // Import Bootstrap CSS
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'; // Import Bootstrap JS
+import { axiosInstance } from "../../axiosUtils";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -26,7 +27,7 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:5000/register', formData);
+      const res = await axiosInstance.post('/register', formData);
       toast.success(res.data.message);
       navigate('/login');
     } catch (error) {

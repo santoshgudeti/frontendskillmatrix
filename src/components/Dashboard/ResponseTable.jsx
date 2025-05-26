@@ -36,6 +36,7 @@ import { toast } from "react-toastify";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./UploadDocuments.css";
+import { axiosInstance } from "../../axiosUtils";
 
 function ResponseTable({ data, duplicateCount  }) {
 
@@ -236,7 +237,7 @@ function ResponseTable({ data, duplicateCount  }) {
   const handleResumeLink = async (resumeId) => {
     try {
       if (!resumeId) return '#';
-      const response = await axios.get(`http://localhost:5000/api/resumes/${resumeId}`);
+      const response = await axiosInstance.get(`/api/resumes/${resumeId}`);
       return response.data?.url || '#';
     } catch (error) {
       console.error('Error getting resume URL:', error);
@@ -421,8 +422,8 @@ function ResponseTable({ data, duplicateCount  }) {
                                 onClick={async (e) => {
                                   e.preventDefault();
                                   try {
-                                    const response = await axios.get(
-                                      `http://localhost:5000/api/resumes/${result.resumeId}?download=true`
+                                    const response = await axiosInstance.get(
+                                      `/api/resumes/${result.resumeId}?download=true`
                                     );
                                     if (response.data?.url) {
                                       window.location.href = response.data.url; // This triggers the download

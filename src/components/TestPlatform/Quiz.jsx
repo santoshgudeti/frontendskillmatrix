@@ -5,6 +5,7 @@ import { Button, Alert, Spinner } from "react-bootstrap";
 import Question from './Question';
 import Result from './Result';
 import "./TestPlatform.css";
+import { axiosInstance } from '../../axiosUtils';
 const Quiz = ({ proctored = true, onComplete }) => {
   const { token } = useParams();
   const navigate = useNavigate();
@@ -82,8 +83,8 @@ const handleAutoSubmit = async () => {
     const fetchQuestions = async () => {
       try {
         // First try to get questions from assessment session
-        const response = await axios.get(
-          `http://localhost:5000/api/assessment-questions/${token}`
+        const response = await axiosInstance.get(
+          `/api/assessment-questions/${token}`
         );
         
         if (response.data.questions && response.data.questions.length > 0) {
@@ -203,7 +204,7 @@ const handleAutoSubmit = async () => {
     } else {
       // Standalone quiz mode - submit directly to backend
       try {
-        await axios.post('http://localhost:5000/api/submit-score', {
+        await axiosInstance.post('/api/submit-score', {
           token,
           score: finalScore,
         });

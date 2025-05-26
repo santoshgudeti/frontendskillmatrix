@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import axios from 'axios';
+import { axiosInstance } from '../../axiosUtils';
 
 const ProtectedRoute = ({ children, isAdmin }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -9,7 +10,7 @@ const ProtectedRoute = ({ children, isAdmin }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/user', { withCredentials: true });
+        const res = await axiosInstance.get('/user', { withCredentials: true });
         setIsAuthenticated(true);
         setUser(res.data.user);
       } catch (error) {

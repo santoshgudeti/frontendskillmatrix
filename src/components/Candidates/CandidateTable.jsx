@@ -26,15 +26,14 @@ import {
   faCalendarAlt
   
 } from "@fortawesome/free-solid-svg-icons"
-
 import '../Dashboard/UploadDocuments.css';
-
 import axios from "axios";
 import React, { useState, useEffect } from "react";
 import { Button, Modal, Form, Spinner, Alert, Dropdown } from 'react-bootstrap';
 import { io } from "socket.io-client";
 import { FaExpand, FaCompress } from "react-icons/fa";
 import { faGoogle, faMicrosoft} from '@fortawesome/free-brands-svg-icons';
+import { axiosInstance } from "../../axiosUtils";
  
 function CandidateTable() {
   const [expandedRow, setExpandedRow] = useState(null)
@@ -75,7 +74,7 @@ function CandidateTable() {
   
 
   useEffect(() => {
-    const socket = io("http://localhost:5000");
+    const socket = io("");
 
     socket.on("apiResponseUpdated", (newResponse) => {
       setCandidates((prevCandidates) => {
@@ -104,8 +103,8 @@ function CandidateTable() {
       const fetchData = async () => {
         try {
           const [candidatesRes, scoresRes] = await Promise.all([
-            axios.get('http://localhost:5000/api/candidate-filtering'),
-            axios.get('http://localhost:5000/api/test-results')
+            axiosInstance.get('/api/candidate-filtering'),
+            axiosInstance.get('/api/test-results')
           ]);
           setCandidates(candidatesRes.data);
           setTestScores(scoresRes.data); // Updated variable name
@@ -130,8 +129,8 @@ function CandidateTable() {
       
         try {
           // Step 1: Generate MCQ questions
-          const mcqResponse = await axios.post(
-            'http://localhost:5000/api/generate-questions',
+          const mcqResponse = await axiosInstance.post(
+            '/api/generate-questions',
             { resumeId, jobDescriptionId: jdId }
           );
       
@@ -145,8 +144,8 @@ function CandidateTable() {
           }));
       
           // Step 2: Generate Voice questions
-          const voiceResponse = await axios.post(
-            'http://localhost:5000/api/generate-voice-questions',
+          const voiceResponse = await axiosInstance.post(
+            '/api/generate-voice-questions',
             { jobDescriptionId: jdId }
           );
       
@@ -160,8 +159,8 @@ function CandidateTable() {
           }));
       
           // Step 3: Create assessment session with both question sets
-          const sessionResponse = await axios.post(
-            'http://localhost:5000/api/send-test-link',
+          const sessionResponse = await axiosInstance.post(
+            '/api/send-test-link',
             {
               candidateEmail,
               jobTitle,
@@ -188,7 +187,7 @@ function CandidateTable() {
           setTimeout(() => {
             setShowGenerationModal(false);
             fetchCandidates();
-          }, 2000);
+          }, 10000);
       
         } catch (error) {
           console.error('Assessment error:', error);
@@ -209,38 +208,35 @@ function CandidateTable() {
           });
         }
       };
+      useEffect(() => {
+        const fetchCandidates = async () => {
+          try {
+            const response = await axiosInstance.get("/api/candidate-filtering");
+            const data = response.data;
 
-  useEffect(() => {
-    const fetchCandidates = async () => {
-      try {
-        const response = await fetch(
-          "http://localhost:5000/api/candidate-filtering"
-        );
-        const data = await response.json();
+            const uniqueCandidates = data.filter((member, index, self) => {
+              return (
+                index ===
+                self.findIndex(
+                  (c) =>
+                    c.resumeId === member.resumeId &&
+                    c.jobDescriptionId === member.jobDescriptionId
+                )
+              );
+            });
 
-        const uniqueCandidates = data.filter((member, index, self) => {
-          return (
-            index ===
-            self.findIndex(
-              (c) =>
-                c.resumeId === member.resumeId &&
-                c.jobDescriptionId === member.jobDescriptionId
-            )
-          );
-        });
+            console.log("Fetched candidates:", uniqueCandidates);
+            setMembers(uniqueCandidates);
+            setFilteredMembers(uniqueCandidates); // Initially show all members
+          } catch (error) {
+            console.error("Error fetching candidate data:", error.message);
+          } finally {
+            setLoading(false);
+          }
+        };
 
-        console.log("Fetched candidates:", uniqueCandidates);
-        setMembers(uniqueCandidates);
-        setFilteredMembers(uniqueCandidates); // Initially show all members
-      } catch (error) {
-        console.error("Error fetching candidate data:", error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-  
-    fetchCandidates();
-  }, []);
+        fetchCandidates();
+      }, []);
 
   const toggleModal = (filter) => {
     setShowModal((prev) => ({ ...prev, [filter]: !prev[filter] }));
@@ -354,7 +350,7 @@ function CandidateTable() {
   const handleResumeLink = async (resumeId) => {
     try {
       if (!resumeId) return '#';
-      const response = await axios.get(`http://localhost:5000/api/resumes/${resumeId}`);
+      const response = await axiosInstance.get(`/api/resumes/${resumeId}`);
       return response.data?.url || '#';
     } catch (error) {
       console.error('Error getting resume URL:', error);
@@ -364,7 +360,7 @@ function CandidateTable() {
   const handlejdLink = async (jobDescriptionId) => {
     try {
       if (!jobDescriptionId) return '#';
-      const response = await axios.get(`http://localhost:5000/api/job-descriptions/${jobDescriptionId}`);
+      const response = await axiosInstance.get(`/api/job-descriptions/${jobDescriptionId}`);
       return response.data?.url || '#';
     } catch (error) {
       console.error('Error getting resume URL:', error);
@@ -644,8 +640,8 @@ function CandidateTable() {
                                 onClick={async (e) => {
                                   e.preventDefault();
                                   try {
-                                    const response = await axios.get(
-                                      `http://localhost:5000/api/resumes/${result.resumeId?._id}?download=true`
+                                    const response = await axiosInstance.get(
+                                      `/api/resumes/${result.resumeId?._id}?download=true`
                                     );
                                     if (response.data?.url) {
                                       window.location.href = response.data.url; // This triggers the download

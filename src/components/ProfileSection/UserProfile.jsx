@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Card, Button, Modal, Container, Row, Col } from 'react-bootstrap';
+import { axiosInstance } from '../../axiosUtils';
 
 const UserProfile = () => {
   const [user, setUser] = useState(null);
@@ -12,7 +13,7 @@ const UserProfile = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/user', { withCredentials: true });
+        const res = await axiosInstance.get('/user', { withCredentials: true });
         setUser(res.data.user);
       } catch (error) {
         toast.error(error.response?.data?.message || 'Failed to fetch user details');
@@ -23,7 +24,7 @@ const UserProfile = () => {
 
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:5000/logout', {}, { withCredentials: true });
+      await axiosInstance.post('/logout', {}, { withCredentials: true });
       navigate('/login');
     } catch (error) {
       console.error('Logout failed:', error);
