@@ -40,8 +40,8 @@ const Register = () => {
       <div className="container">
       <div className="auth-form bg-white">
         <div className="text-center mb-4">
-          <h2 className="fw-bold">Create your account</h2>
-          <p className="text-muted">Start your 14-day free trial - no credit card required</p>
+          <h2 className="fw-bold">Apply for your Free trail</h2>
+          <p className="text-muted"> No credit card required</p>
 
 
 

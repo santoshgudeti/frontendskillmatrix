@@ -6,6 +6,7 @@ import UploadDocuments from '../Dashboard/UploadDocuments';
 import React, { useRef,useEffect, useState } from "react";
 import ResponseTable from "../Dashboard/ResponseTable";
 import AdminDashboard from "../ProfileSection/AdminDashboard";
+import AdminUserDetail from "../ProfileSection/AdminUserDetail"; // Add this import
 import UserProfile from "../ProfileSection/UserProfile";
 
 function Dashboard({ onLogout }) {
@@ -18,7 +19,7 @@ function Dashboard({ onLogout }) {
   };
   return (
     <div className="d-flex min-vh-100">
-      <Sidebar onLogout={onLogout} />
+      
       <div className="flex-grow-1 d-flex flex-column">
         <Header />
         
@@ -34,6 +35,8 @@ function Dashboard({ onLogout }) {
             
           )}/>
              <Route path="admin" element={<AdminDashboard />} />
+            <Route path="admin/users/:id" element={<AdminUserDetail />} /> {/* Add this route */}
+
              <Route path="user" element={<UserProfile />} />
             
            
