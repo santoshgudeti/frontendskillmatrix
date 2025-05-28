@@ -11,6 +11,10 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Set environment variable for backend URL
+ARG VITE_BACKEND_URL
+ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
+
 # Build the Vite app
 RUN npm run build
 
