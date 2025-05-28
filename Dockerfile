@@ -5,17 +5,13 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install dependencies
-COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
-RUN \
-    if [ -f package-lock.json ]; then npm ci; \
-    elif [ -f pnpm-lock.yaml ]; then npm install -g pnpm && pnpm install; \
-    elif [ -f yarn.lock ]; then yarn install --frozen-lockfile; \
-    else npm install; fi
+COPY package.json package-lock.json* ./
+RUN npm ci
 
 # Copy source code
 COPY . .
 
-# Build the app
+# Build the Vite app
 RUN npm run build
 
 # Production image
@@ -27,7 +23,7 @@ RUN rm -rf /usr/share/nginx/html/*
 # Copy built assets from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy custom nginx config (optional, for SPA routing)
+# Copy custom nginx config for SPA routing
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port 80
