@@ -19,19 +19,19 @@ ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
 RUN npm run build
 
 # Production image
-FROM nginx:alpine
+FROM node:20-alpine
 
-# Remove default nginx static assets
-RUN rm -rf /usr/share/nginx/html/*
+# Set working directory
+WORKDIR /app
 
 # Copy built assets from builder
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist ./dist
 
-# Copy custom nginx config for SPA routing
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Install serve package globally
+RUN npm install -g serve
 
-# Expose port 80
-EXPOSE 80
+# Expose port 3000 (default serve port)
+EXPOSE 3000
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start the preview server
+CMD ["serve", "-s", "dist", "-l", "3000"]
