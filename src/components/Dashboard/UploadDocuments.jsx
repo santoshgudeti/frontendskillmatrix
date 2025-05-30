@@ -1,6 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCloudArrowUp, faFile, faTrash, faTimes } from "@fortawesome/free-solid-svg-icons";
-import React, { useState, useCallback } from "react";
+import React, { useState, useEffect,useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -16,6 +16,16 @@ function UploadDocuments({ setResponseData }) {
   const [activeModal, setActiveModal] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+ 
+const [usageLimits, setUsageLimits] = useState(null);
+
+  useEffect(() => {
+    const fetchUsage = async () => {
+      const res = await axiosInstance.get('/user', { withCredentials: true });
+      setUsageLimits(res.data.user);
+    };
+    fetchUsage();
+  }, []);
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
@@ -165,44 +175,68 @@ function UploadDocuments({ setResponseData }) {
     </div>
   );
 
-  const handleSubmit = async () => {
-    if (resumeFiles.length === 0 || !jobDescFile) {
-      alert("Please upload resumes and a job description");
+// Update handleSubmit function
+const handleSubmit = async () => {
+  try {
+    // Check if usage data is loaded
+    if (!usageLimits || !usageLimits.subscription || !usageLimits.usage) {
+      toast.error('Unable to verify your subscription limits. Please try again.');
+      return;
+    }
+
+    // Validate files
+    if (resumeFiles.length === 0) {
+      toast.error('Please upload at least one resume');
+      return;
+    }
+
+    if (!jobDescFile) {
+      toast.error('Please upload a job description');
+      return;
+    }
+
+    // Check limits
+    const remainingResumes = usageLimits.subscription.limits.resumeUploads - usageLimits.usage.resumeUploads;
+    if (resumeFiles.length > remainingResumes) {
+      toast.error(`You can only upload ${remainingResumes} more resumes with your current plan`);
+      return;
+    }
+
+    if (usageLimits.usage.jdUploads >= usageLimits.subscription.limits.jdUploads) {
+      toast.error('You have reached your job description upload limit');
       return;
     }
 
     setIsSubmitting(true);
-    console.log("Submitting files. Resumes:", resumeFiles, "Job Description:", jobDescFile);
+    
+    const formData = new FormData();
+    resumeFiles.forEach((file) => formData.append("resumes", file));
+    formData.append("job_description", jobDescFile);
 
-    try {
-      const formData = new FormData();
-      resumeFiles.forEach((file) => formData.append("resumes", file));
-      formData.append("job_description", jobDescFile);
+    const response = await axiosInstance.post(
+      "/api/submit",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
 
-      const response = await axiosInstance.post(
-        "/api/submit",
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-
-      console.log("Response received from server:", response.data);
-      setResponseData({
-        results: response.data?.results || [],
-        duplicateCount: response.data?.duplicateCount || 0,
-      });
-       // ✅ Automatically switch to Response page
-       navigate("/dashboard/response"); 
-    } catch (error) {
-      console.error("Error submitting files:", error.response?.data || error.message);
-      alert("Error submitting files. Please check the console for more details.");
-    } finally {
-      setIsSubmitting(false);
-      console.log("File submission process completed.");
-    }
-  };
+    toast.success('Files uploaded successfully!');
+    setResponseData({
+      results: response.data?.results || [],
+      duplicateCount: response.data?.duplicateCount || 0,
+    });
+    navigate("/dashboard/response");
+  } catch (error) {
+    const errorMessage = error.response?.data?.error || 'Error submitting files';
+    toast.error(errorMessage);
+    console.error("Error details:", error.response?.data || error.message);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <div className="upload-container">
+    
       <UploadSection title="Upload Resumes" files={resumeFiles} type="resume" />
       <UploadSection title="Upload Job Description" file={jobDescFile} type="jobDesc" />
 

@@ -5,8 +5,7 @@ import axios from 'axios';
   baseURL: import.meta.env.VITE_BACKEND_URL,
   withCredentials: true, // optional - if you use cookies or sessions
 });
-
-// export default axiosInstance;
+ export default axiosInstance;
 // export const setAuthToken = (token) => {
 //   if (token) {
 //     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;

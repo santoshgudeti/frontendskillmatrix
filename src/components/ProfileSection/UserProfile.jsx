@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { Card, Button, Modal, Container, Row, Col } from 'react-bootstrap';
+import { Card, Button, Modal, Container, Row, Col, Badge, Alert } from 'react-bootstrap';
+
 import { axiosInstance } from '../../axiosUtils';
 
 const UserProfile = () => {
@@ -131,6 +132,79 @@ const UserProfile = () => {
                 </div>
               </div>
             </Card.Body>
+            <Card.Body className="px-4">
+<div className="subscription-section mt-4">
+  <h4 className="text-center mb-3">
+    <i className="fas fa-crown me-2"></i>
+    Subscription Plan
+  </h4>
+  
+  <div className="text-center mb-3">
+    <Badge bg={
+      user.subscription.plan === 'paid' ? 'success' : 
+      user.subscription.plan === 'free' ? 'info' : 'warning'
+    }>
+      {user.subscription.plan.toUpperCase()} PLAN
+    </Badge>
+    
+    {user.subscription.expiresAt ? (
+      <p className="mt-2 mb-0">
+        <i className="fas fa-calendar-alt me-1"></i>
+        Valid until: {new Date(user.subscription.expiresAt).toLocaleDateString()}
+      </p>
+    ) : (
+      <p className="mt-2 mb-0">
+        <i className="fas fa-infinity"></i> No expiration
+      </p>
+    )}
+  </div>
+
+  {user.subscription.plan === 'trial' && (
+    <Alert variant="warning" className="text-center">
+      <i className="fas fa-exclamation-triangle me-2"></i>
+      Trial period active. Upgrade for full access.
+    </Alert>
+  )}
+
+
+    // Update the usage display section
+<div className="usage-meters">
+  {/* JD Uploads */}
+  <div className="mb-3">
+    <label className="form-label">
+      JD Uploads: {user.usage?.jdUploads || 0}/{user.subscription?.limits?.jdUploads || 1}
+    </label>
+    <progress 
+      value={user.usage?.jdUploads || 0} 
+      max={user.subscription?.limits?.jdUploads || 1} 
+    />
+  </div>
+
+  {/* Resume Uploads */}
+  <div className="mb-3">
+    <label className="form-label">
+      Resume Uploads: {user.usage?.resumeUploads || 0}/{user.subscription?.limits?.resumeUploads || 10}
+    </label>
+    <progress 
+      value={user.usage?.resumeUploads || 0} 
+      max={user.subscription?.limits?.resumeUploads || 10} 
+    />
+  </div>
+
+  {/* Assessments */}
+  <div>
+    <label className="form-label">
+      Assessments: {user.usage?.assessments || 0}/{user.subscription?.limits?.assessments || 1}
+    </label>
+    <progress 
+      value={user.usage?.assessments || 0} 
+      max={user.subscription?.limits?.assessments || 1} 
+    />
+  </div>
+</div>
+  </div>
+</Card.Body>
+
           </Card>
         </Col>
       </Row>

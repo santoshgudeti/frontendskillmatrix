@@ -16,6 +16,8 @@ import {
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { axiosInstance } from '../../axiosUtils';
 
+import "./Admin.css"
+
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);

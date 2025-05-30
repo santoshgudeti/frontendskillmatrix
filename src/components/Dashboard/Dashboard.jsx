@@ -34,7 +34,7 @@ function Dashboard({ onLogout }) {
             />
             
           )}/>
-             <Route path="admin" element={<AdminDashboard />} />
+             <Route path="admin/*" element={<AdminDashboard />} />
             <Route path="admin/users/:id" element={<AdminUserDetail />} /> {/* Add this route */}
 
              <Route path="user" element={<UserProfile />} />
