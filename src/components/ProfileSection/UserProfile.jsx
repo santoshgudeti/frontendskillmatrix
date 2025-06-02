@@ -170,6 +170,13 @@ const UserProfile = () => {
     // Update the usage display section
 <div className="usage-meters">
   {/* JD Uploads */}
+    {user.subscription?.plan === 'paid' ? (
+    <Alert variant="success">
+      <i className="fas fa-infinity me-2"></i>
+      You have unlimited access with your paid subscription
+    </Alert>
+  ) : (
+    <>
   <div className="mb-3">
     <label className="form-label">
       JD Uploads: {user.usage?.jdUploads || 0}/{user.subscription?.limits?.jdUploads || 1}
@@ -200,9 +207,13 @@ const UserProfile = () => {
       value={user.usage?.assessments || 0} 
       max={user.subscription?.limits?.assessments || 1} 
     />
+    
   </div>
+   </>
+   )}
 </div>
   </div>
+  
 </Card.Body>
 
           </Card>

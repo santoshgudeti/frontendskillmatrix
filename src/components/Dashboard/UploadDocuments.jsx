@@ -179,8 +179,8 @@ const [usageLimits, setUsageLimits] = useState(null);
 const handleSubmit = async () => {
   try {
     // Check if usage data is loaded
-    if (!usageLimits || !usageLimits.subscription || !usageLimits.usage) {
-      toast.error('Unable to verify your subscription limits. Please try again.');
+    if (!usageLimits) {
+      toast.error('Unable to verify your subscription status. Please try again.');
       return;
     }
 
@@ -195,16 +195,20 @@ const handleSubmit = async () => {
       return;
     }
 
-    // Check limits
-    const remainingResumes = usageLimits.subscription.limits.resumeUploads - usageLimits.usage.resumeUploads;
-    if (resumeFiles.length > remainingResumes) {
-      toast.error(`You can only upload ${remainingResumes} more resumes with your current plan`);
-      return;
-    }
+    // Skip limit checks for admin and paid users without limits
+    if (!usageLimits.isAdmin && usageLimits.subscription?.limits) {
+      // Check resume upload limit
+      const remainingResumes = usageLimits.subscription.limits.resumeUploads - (usageLimits.usage?.resumeUploads || 0);
+      if (resumeFiles.length > remainingResumes) {
+        toast.error(`You can only upload ${remainingResumes} more resumes with your current plan`);
+        return;
+      }
 
-    if (usageLimits.usage.jdUploads >= usageLimits.subscription.limits.jdUploads) {
-      toast.error('You have reached your job description upload limit');
-      return;
+      // Check JD upload limit
+      if ((usageLimits.usage?.jdUploads || 0) >= usageLimits.subscription.limits.jdUploads) {
+        toast.error('You have reached your job description upload limit');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -233,7 +237,6 @@ const handleSubmit = async () => {
     setIsSubmitting(false);
   }
 };
-
   return (
     <div className="upload-container">
     

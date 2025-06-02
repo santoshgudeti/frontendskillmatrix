@@ -252,8 +252,8 @@ const handleSubscriptionUpdate = async () => {
               </Col>
             </Row>
 
-           
- <Card className="mt-4">
+// Updated subscription display logic
+<Card className="mt-4">
   <Card.Header>Subscription Management</Card.Header>
   <Card.Body>
     <Form.Group>
@@ -263,7 +263,6 @@ const handleSubscriptionUpdate = async () => {
         onChange={(e) => setSubscriptionData({
           ...subscriptionData, 
           plan: e.target.value,
-          // Reset months when changing plan type
           months: e.target.value === 'paid' ? subscriptionData.months : 0
         })}
       >
@@ -300,6 +299,15 @@ const handleSubscriptionUpdate = async () => {
           <strong>Expires:</strong> {new Date(user.subscription.expiresAt).toLocaleDateString()}
         </p>
       )}
+      <p className="mb-1">
+        <strong>Limits:</strong> {user.subscription.limits ? (
+          <>
+            JD Uploads: {user.subscription.limits.jdUploads || 'Unlimited'}, 
+            Resumes: {user.subscription.limits.resumeUploads || 'Unlimited'}, 
+            Assessments: {user.subscription.limits.assessments || 'Unlimited'}
+          </>
+        ) : 'Unlimited (Paid Plan)'}
+      </p>
     </div>
     
     <Button 

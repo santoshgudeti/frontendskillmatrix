@@ -3,9 +3,15 @@ import { Link, useLocation } from 'react-router-dom'
 import SMlogo from "../../assets/SMlogo.png";
 const Navbar = () => {
   const location = useLocation()
+  const scrollToSection = (sectionId) => {
+    const element = document.getElementById(sectionId)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
   
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-white py-3">
+   <nav className="navbar navbar-expand-lg navbar-light bg-white py-3">
       <div className="container">
         <Link className="navbar-brand d-flex align-items-center" to="/">
               <img
@@ -19,14 +25,10 @@ const Navbar = () => {
               boxShadow: "0 0 5px rgba(0,0,0,0.3)"
             }}
           />
-        <div className="ms-2">
-        <span className="fw-bold d-block  pb-0">
-
-        </span>
-      </div>
+      
         </Link>
         
-        <button 
+         <button 
           className="navbar-toggler" 
           type="button" 
           data-bs-toggle="collapse" 
@@ -37,40 +39,48 @@ const Navbar = () => {
         >
           <span className="navbar-toggler-icon"></span>
         </button>
-        
-        <div className="collapse navbar-collapse justify-content-center" id="navbarNav">
-          <ul className="navbar-nav mx-auto">
+       <div className="collapse navbar-collapse" id="navbarNav">
+          <ul className="navbar-nav me-auto">
             <li className="nav-item text-dark">
-              <Link 
-                className={`nav-link ${location.pathname === '/' ? 'active' : ''}`} 
-                to="/"
-              >
+          <Link className="nav-link" to="/">
                 Home
               </Link>
             </li>
-            <li className="nav-item text-dark">
-              <Link 
-                className={`nav-link ${location.pathname === '/features' ? 'active' : ''}`} 
-                to="#features"
+            <li className="nav-item">
+              <a 
+                className="nav-link" 
+                href="#features"
+                onClick={(e) => {
+                  e.preventDefault()
+                  scrollToSection('features')
+                }}
               >
                 Features
-              </Link>
+              </a>
             </li>
             <li className="nav-item">
-              <Link 
-                className={`nav-link ${location.pathname === '/pricing' ? 'active' : ''}`} 
-                to="#pricing"
+              <a 
+                className="nav-link" 
+                href="#pricing"
+                onClick={(e) => {
+                  e.preventDefault()
+                  scrollToSection('pricing')
+                }}
               >
                 Pricing
-              </Link>
+              </a>
             </li>
             <li className="nav-item">
-              <Link 
-                className={`nav-link ${location.pathname === '/about' ? 'active' : ''}`} 
-                to="#about"
+              <a 
+                className="nav-link" 
+                href="#about"
+                onClick={(e) => {
+                  e.preventDefault()
+                  scrollToSection('about')
+                }}
               >
                 About
-              </Link>
+              </a>
             </li>
           </ul>
           
