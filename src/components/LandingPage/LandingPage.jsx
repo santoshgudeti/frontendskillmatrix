@@ -242,24 +242,26 @@ const LandingPage = () => {
       </section>
 
       {/* About Section */}
-      <section className="py-5 bg-light" id="about">
-        <div className="container py-5">
-          <div className="row align-items-center">
-            <div className="col-lg-6 mb-4 mb-lg-0">
-              <h2 className="display-5 fw-bold mb-4">About Skill Matrix ATS</h2>
-              <p className="lead mb-4">
-                We're revolutionizing the way companies handle their recruitment process through innovative technology and AI-powered solutions.
-              </p>
-              <p className="text-muted mb-4">
-                Our mission is to simplify and streamline the hiring process, making it easier for companies to find and hire the best talent. With our advanced ATS system, we're helping organizations make better hiring decisions and build stronger teams.
-              </p>
-              <div className="d-flex gap-3">
-                <a href="#features" className="btn btn-primary">
-                  Explore Features
-                </a>
-                <Link to="/register" className="btn btn-outline-primary">
-                  Get Started
-                </Link>
+  <section className="py-5 bg-light" id="about">
+  <div className="container py-5" style={{ fontFamily: "'Inter', sans-serif", color: "#222" }}>
+    <div className="row align-items-center">
+      <div className="col-lg-6 mb-4 mb-lg-0">
+        <h2 className="display-5 fw-bold mb-4" style={{ letterSpacing: "0.03em", fontWeight: 700 }}>
+          About Skill Matrix ATS
+        </h2>
+        <p className="lead mb-4" style={{ fontWeight: 600, fontSize: "1.25rem", color: "#444" }}>
+          We're revolutionizing the way companies handle their recruitment process through innovative technology and AI-powered solutions.
+        </p>
+        <p className="text-muted mb-4" style={{ fontWeight: 400, fontSize: "1rem", color: "#666" }}>
+          Our mission is to simplify and streamline the hiring process, making it easier for companies to find and hire the best talent. With our advanced ATS system, we're helping organizations make better hiring decisions and build stronger teams.
+        </p>
+        <div className="d-flex gap-3">
+          <a href="#features" className="btn btn-primary" style={{ fontWeight: 600, fontSize: "1rem", padding: "0.625rem 1.5rem" }}>
+            Explore Features
+          </a>
+          <Link to="/register" className="btn btn-outline-primary" style={{ fontWeight: 600, fontSize: "1rem", padding: "0.625rem 1.5rem" }}>
+            Get Started
+          </Link>
               </div>
             </div>
             <div className="col-lg-6">
