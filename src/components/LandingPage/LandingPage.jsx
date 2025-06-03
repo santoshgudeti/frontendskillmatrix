@@ -212,6 +212,90 @@ const LandingPage = () => {
         </div>
       </section>
 
+         {/* Pricing Section */}
+      <section className="py-5" id="pricing">
+        <div className="container py-5">
+          <div className="text-center mb-5">
+            <h2 className="display-5 fw-bold mb-3">Simple, Transparent Pricing</h2>
+            <p className="lead text-muted">Choose the plan that's right for your business</p>
+          </div>
+          
+          <div className="row justify-content-center">
+            <div className="col-lg-8 text-center">
+              <div className="pricing-enterprise p-5 rounded-lg bg-gradient">
+                <h3 className="text-black mb-4">Enterprise Solution</h3>
+                <p className="text-black-50 mb-4">
+                  Looking for a custom solution? We offer tailored enterprise packages to meet your specific needs.
+                </p>
+                <a 
+                  href="https://cognitbotz.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="btn btn-light btn-lg px-5"
+                >
+                  Contact Enterprise Sales
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section className="py-5 bg-light" id="about">
+        <div className="container py-5">
+          <div className="row align-items-center">
+            <div className="col-lg-6 mb-4 mb-lg-0">
+              <h2 className="display-5 fw-bold mb-4">About Skill Matrix ATS</h2>
+              <p className="lead mb-4">
+                We're revolutionizing the way companies handle their recruitment process through innovative technology and AI-powered solutions.
+              </p>
+              <p className="text-muted mb-4">
+                Our mission is to simplify and streamline the hiring process, making it easier for companies to find and hire the best talent. With our advanced ATS system, we're helping organizations make better hiring decisions and build stronger teams.
+              </p>
+              <div className="d-flex gap-3">
+                <a href="#features" className="btn btn-primary">
+                  Explore Features
+                </a>
+                <Link to="/register" className="btn btn-outline-primary">
+                  Get Started
+                </Link>
+              </div>
+            </div>
+            <div className="col-lg-6">
+              <div className="about-image-container bg-white p-4 rounded-lg shadow-lg">
+                <div className="about-stats row g-4">
+                  <div className="col-6">
+                    <div className="p-4 rounded bg-light text-center">
+                      <h3 className="fw-bold text-primary mb-2">1000+</h3>
+                      <p className="mb-0">Companies Trust Us</p>
+                    </div>
+                  </div>
+                  <div className="col-6">
+                    <div className="p-4 rounded bg-light text-center">
+                      <h3 className="fw-bold text-primary mb-2">50K+</h3>
+                      <p className="mb-0">Successful Hires</p>
+                    </div>
+                  </div>
+                  <div className="col-6">
+                    <div className="p-4 rounded bg-light text-center">
+                      <h3 className="fw-bold text-primary mb-2">98%</h3>
+                      <p className="mb-0">Client Satisfaction</p>
+                    </div>
+                  </div>
+                  <div className="col-6">
+                    <div className="p-4 rounded bg-light text-center">
+                      <h3 className="fw-bold text-primary mb-2">24/7</h3>
+                      <p className="mb-0">Support Available</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section> 
+
       {/* Testimonials Section */}
       <section className="py-5">
         <div className="container py-5">
