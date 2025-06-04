@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { Card, Button, Modal, Container, Row, Col } from 'react-bootstrap';
+import { Card, Button, Modal, Container, Row, Col, Badge, Alert } from 'react-bootstrap';
+
 import { axiosInstance } from '../../axiosUtils';
 
 const UserProfile = () => {
@@ -31,6 +32,29 @@ const UserProfile = () => {
       toast.error('Logout failed. Please try again.');
     }
   };
+
+ // Update the subscription section
+  const getSubscriptionStatus = () => {
+    if (!user.subscription) return 'No active subscription';
+    
+    const planName = user.subscription.plan.charAt(0).toUpperCase() + 
+                    user.subscription.plan.slice(1);
+    
+    if (user.subscription.plan === 'paid') {
+      return `Paid Plan (Expires: ${new Date(user.subscription.expiresAt).toLocaleDateString()})`;
+    }
+    
+    if (user.subscription.plan === 'free') {
+      return 'Free Plan (Unlimited)';
+    }
+    
+    if (user.subscription.plan === 'trial') {
+      return `Trial (Expires: ${new Date(user.subscription.expiresAt).toLocaleDateString()})`;
+    }
+    
+    return `${planName} Plan`;
+  };
+
 
   const handleCloseModal = () => setShowModal(false);
   const handleShowModal = () => setShowModal(true);
@@ -131,6 +155,67 @@ const UserProfile = () => {
                 </div>
               </div>
             </Card.Body>
+            <Card.Body className="px-4">
+   <div className="subscription-section mt-4">
+        <h4 className="text-center mb-3">
+          <i className="fas fa-crown me-2"></i>
+          Subscription Plan
+        </h4>
+        
+        <div className="text-center mb-3">
+          <Badge bg={
+            user.subscription?.plan === 'paid' ? 'success' : 
+            user.subscription?.plan === 'free' ? 'info' : 'warning'
+          }>
+            {getSubscriptionStatus()}
+          </Badge>
+        </div>
+
+        {user.subscription?.plan === 'trial' && (
+          <Alert variant="warning" className="text-center">
+            <i className="fas fa-exclamation-triangle me-2"></i>
+            Trial period active. Upgrade for full access.
+          </Alert>
+        )}
+
+        {user.subscription?.limits && (
+          <div className="usage-meters">
+            <div className="mb-3">
+              <label className="form-label">
+                JD Uploads: {user.usage?.jdUploads || 0}/{user.subscription.limits.jdUploads}
+              </label>
+              <progress 
+                value={user.usage?.jdUploads || 0} 
+                max={user.subscription.limits.jdUploads} 
+              />
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label">
+                Resume Uploads: {user.usage?.resumeUploads || 0}/{user.subscription.limits.resumeUploads}
+              </label>
+              <progress 
+                value={user.usage?.resumeUploads || 0} 
+                max={user.subscription.limits.resumeUploads} 
+              />
+            </div>
+
+            <div>
+              <label className="form-label">
+                Assessments: {user.usage?.assessments || 0}/{user.subscription.limits.assessments}
+              </label>
+              <progress 
+                value={user.usage?.assessments || 0} 
+                max={user.subscription.limits.assessments} 
+              />
+            </div>
+          </div>
+        )}
+      </div>
+  
+  
+</Card.Body>
+
           </Card>
         </Col>
       </Row>

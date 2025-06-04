@@ -304,28 +304,29 @@ if (!validationComplete) {
     switch (currentStep) {
       case 1: // Instructions
         return (
-          
-         <div className="d-flex justify-content-center align-items-center vh-100">
-  <div className="card shadow-lg mb-4">
-    <div className="card-header bg-primary text-white">
-      <h3 className="mb-0">Assessment Instructions</h3>
+       <div className="d-flex justify-content-center align-items-center vh-100 bg-light px-3">
+  <div className="card shadow-lg" style={{ maxWidth: "600px", width: "100%" }}>
+    <div className="card-header bg-gradient bg-primary text-white text-center">
+      <h3 className="mb-0 fs-4 fw-semibold">Assessment Instructions</h3>
     </div>
     <div className="card-body">
       <ol className="list-group list-group-numbered list-group-flush">
-        <li className="list-group-item">Ensure you're in a quiet, well-lit environment</li>
-        <li className="list-group-item">Close all unnecessary applications</li>
-        <li className="list-group-item">Have your ID ready if required</li>
-        <li className="list-group-item">Test your equipment before starting</li>
-        <li className="list-group-item">The session will be recorded</li>
-        <li className="list-group-item">You'll complete an MCQ test after verification</li>
+        <li className="list-group-item fs-6">Ensure you're in a quiet, well-lit environment</li>
+        <li className="list-group-item fs-6">Close all unnecessary applications</li>
+        <li className="list-group-item fs-6">Have your ID ready if required</li>
+        <li className="list-group-item fs-6">Test your equipment before starting</li>
+        <li className="list-group-item fs-6">The session will be recorded</li>
+        <li className="list-group-item fs-6">You'll complete an MCQ test after verification</li>
       </ol>
-      <div className="d-grid gap-2 mt-3">
-        <button 
-          className="btn btn-primary"
+
+      <div className="d-grid gap-2 mt-4">
+        <button
+          className="btn btn-primary btn-lg fw-semibold"
           onClick={async () => {
             const ready = await checkSystemRequirements();
             if (ready) setCurrentStep(2);
           }}
+          style={{ transition: "background-color 0.3s ease" }}
         >
           Begin System Check
         </button>
@@ -334,95 +335,114 @@ if (!validationComplete) {
   </div>
 </div>
 
+
+
         );
       
       case 2: // Verification
         return (
-           <div className="d-flex justify-content-center align-items-center vh-100">
-          <div className="card shadow-lg mb-4">
-            <div className="card-header bg-primary text-white">
-              <h3 className="mb-0">System Verification</h3>
-            </div>
-            <div className="card-body">
-              <div className="list-group mb-3">
-                <div className={`list-group-item ${systemCheck.camera ? 'list-group-item-success' : 'list-group-item-warning'}`}>
-                  <FontAwesomeIcon icon={systemCheck.camera ? faCheckCircle : faExclamationTriangle} className="me-2" />
-                  Camera: {systemCheck.camera ? 'Working' : 'Not detected'}
-                </div>
-                <div className={`list-group-item ${systemCheck.microphone ? 'list-group-item-success' : 'list-group-item-warning'}`}>
-                  <FontAwesomeIcon icon={systemCheck.microphone ? faCheckCircle : faExclamationTriangle} className="me-2" />
-                  Microphone: {systemCheck.microphone ? 'Working' : 'Not detected'}
-                </div>
-              </div>
-              
-              <div className="d-grid gap-2">
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => setCurrentStep(3)}
-                  disabled={!systemCheck.camera || !systemCheck.microphone}
-                >
-                  Continue to Consent
-                </button>
-                <button 
-                  className="btn btn-outline-secondary"
-                  onClick={() => setCurrentStep(1)}
-                >
-                  Back
-                </button>
-              </div>
-            </div>
-          </div>
-          </div>
+      <div className="d-flex justify-content-center align-items-center vh-100 bg-light px-3">
+  <div className="card shadow-lg" style={{ maxWidth: "600px", width: "100%" }}>
+    <div className="card-header bg-gradient bg-primary text-white text-center">
+      <h3 className="mb-0 fs-4 fw-semibold">System Verification</h3>
+    </div>
+    <div className="card-body">
+      <div className="list-group mb-4">
+        <div
+          className={`list-group-item d-flex align-items-center gap-2 fs-6 fw-medium 
+            ${systemCheck.camera ? 'list-group-item-success' : 'list-group-item-warning'}`}
+        >
+          <FontAwesomeIcon
+            icon={systemCheck.camera ? faCheckCircle : faExclamationTriangle}
+            className={`text-${systemCheck.camera ? 'success' : 'warning'} fs-5`}
+          />
+          <span>Camera: {systemCheck.camera ? 'Working' : 'Not detected'}</span>
+        </div>
+        <div
+          className={`list-group-item d-flex align-items-center gap-2 fs-6 fw-medium 
+            ${systemCheck.microphone ? 'list-group-item-success' : 'list-group-item-warning'}`}
+        >
+          <FontAwesomeIcon
+            icon={systemCheck.microphone ? faCheckCircle : faExclamationTriangle}
+            className={`text-${systemCheck.microphone ? 'success' : 'warning'} fs-5`}
+          />
+          <span>Microphone: {systemCheck.microphone ? 'Working' : 'Not detected'}</span>
+        </div>
+      </div>
+
+      <div className="d-grid gap-2">
+        <button
+          className="btn btn-primary btn-lg fw-semibold"
+          onClick={() => setCurrentStep(3)}
+          disabled={!systemCheck.camera || !systemCheck.microphone}
+          style={{ transition: "background-color 0.3s ease" }}
+        >
+          Continue to Consent
+        </button>
+        <button
+          className="btn btn-outline-secondary btn-lg fw-semibold"
+          onClick={() => setCurrentStep(1)}
+        >
+          Back
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
         );
       
       case 3: // Consent
         return (
-          <div className="d-flex justify-content-center align-items-center vh-100">
-          <div className="card shadow-lg mb-4">
-            <div className="card-header bg-primary text-white">
-              <h3 className="mb-0">Recording Consent</h3>
-            </div>
-            <div className="card-body">
-              <div className="alert alert-info mb-4">
-                <p>By proceeding, you consent to:</p>
-                <ul>
-                  <li>Recording of your camera, microphone, and screen</li>
-                  <li>Storage and processing of the recording</li>
-                  <li>Completion of an MCQ test under supervision</li>
-                </ul>
-              </div>
-              
-              <div className="form-check mb-3">
-                <input 
-                  className="form-check-input" 
-                  type="checkbox" 
-                  id="consentCheck" 
-                  checked={consentGiven}
-                  onChange={(e) => setConsentGiven(e.target.checked)}
-                />
-                <label className="form-check-label" htmlFor="consentCheck">
-                  I understand and consent to the recording and assessment
-                </label>
-              </div>
-              
-              <div className="d-grid gap-2">
-                <button 
-                  className="btn btn-primary"
-                  onClick={startRecording}
-                  disabled={!consentGiven}
-                >
-                  Begin Assessment
-                </button>
-                <button 
-                  className="btn btn-outline-secondary"
-                  onClick={() => setCurrentStep(2)}
-                >
-                  Back
-                </button>
-              </div>
-            </div>
-          </div>
-          </div>
+         <div className="d-flex justify-content-center align-items-center vh-100 bg-light px-3">
+  <div className="card shadow-lg w-100" style={{ maxWidth: '700px' }}>
+    <div className="card-header bg-primary text-white text-center">
+      <h3 className="mb-0 fs-4 fw-semibold">Recording Consent</h3>
+    </div>
+    <div className="card-body">
+      <div className="alert alert-info mb-4">
+        <h5 className="mb-2 fs-6 fw-semibold">By proceeding, you consent to:</h5>
+        <ul className="mb-0 fs-6">
+          <li>Recording of your camera, microphone, and screen</li>
+          <li>Storage and processing of the recording</li>
+          <li>Completion of an MCQ test under supervision</li>
+        </ul>
+      </div>
+
+      <div className="form-check mb-4">
+        <input
+          className="form-check-input"
+          type="checkbox"
+          id="consentCheck"
+          checked={consentGiven}
+          onChange={(e) => setConsentGiven(e.target.checked)}
+        />
+        <label className="form-check-label ms-2 fs-6 fw-medium" htmlFor="consentCheck">
+          I understand and consent to the recording and assessment
+        </label>
+      </div>
+
+      <div className="d-grid gap-2">
+        <button
+          className="btn btn-primary btn-lg fw-semibold"
+          onClick={startRecording}
+          disabled={!consentGiven}
+          style={{ transition: 'background-color 0.3s ease' }}
+        >
+          Begin Assessment
+        </button>
+        <button
+          className="btn btn-outline-secondary btn-lg fw-semibold"
+          onClick={() => setCurrentStep(2)}
+        >
+          Back
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
         );
       
       case 4: // Quiz
@@ -439,28 +459,31 @@ if (!validationComplete) {
       
         case 5: // Completion
         return (
-          <div className="card shadow-lg mb-4">
-            <div className="card-header bg-success text-white">
-              <h3 className="mb-0">Assessment Complete</h3>
-            </div>
-            <div className="card-body">
-              <div className="alert alert-success">
-                <p>Your assessment has been successfully submitted!</p>
-                <p><strong>This link is now expired.</strong> You cannot retake this assessment.</p>
-              </div>
-              <div className="d-grid">
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => {
-                    stopAllMediaTracks();
-                    navigate('/');
-                  }}
-                >
-                  Return to Home
-                </button>
-              </div>
-            </div>
-          </div>
+         <div className="d-flex justify-content-center align-items-center vh-100">
+  <div className="card shadow-lg mb-4">
+    <div className="card-header bg-success text-white">
+      <h3 className="mb-0">Assessment Complete</h3>
+    </div>
+    <div className="card-body">
+      <div className="alert alert-success">
+        <p>Your assessment has been successfully submitted!</p>
+        <p><strong>This link is now expired.</strong> You cannot retake this assessment.</p>
+      </div>
+      <div className="d-grid">
+        <button 
+          className="btn btn-primary"
+          onClick={() => {
+            stopAllMediaTracks();
+            navigate('/');
+          }}
+        >
+          Return to Home
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
         );
       default:
         return null;

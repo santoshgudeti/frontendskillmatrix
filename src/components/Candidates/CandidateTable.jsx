@@ -124,10 +124,26 @@ function CandidateTable() {
           loading: true,
           error: null,
           success: false,
-          message: 'Generating MCQ questions...'
+          message: 'Checking your assessment limits...'
         });
-      
+
         try {
+          // First check user's subscription status
+          const userRes = await axiosInstance.get('/user', { withCredentials: true });
+          const user = userRes.data.user;
+
+          // Check assessment limits if not admin and has limits
+          if (!user.isAdmin && user.subscription?.limits?.assessments) {
+            const remainingAssessments = user.subscription.limits.assessments - (user.usage?.assessments || 0);
+            if (remainingAssessments <= 0) {
+              throw new Error(`You've reached your assessment limit (${user.subscription.limits.assessments})`);
+            }
+          }
+
+          setGenerationStatus(prev => ({
+            ...prev,
+            message: 'Generating MCQ questions...'
+          }));
           // Step 1: Generate MCQ questions
           const mcqResponse = await axiosInstance.post(
             '/api/generate-questions',

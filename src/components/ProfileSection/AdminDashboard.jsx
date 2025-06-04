@@ -16,6 +16,8 @@ import {
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { axiosInstance } from '../../axiosUtils';
 
+import "./Admin.css"
+
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -52,6 +54,20 @@ const AdminDashboard = () => {
     }
   };
 
+    // Add this helper function
+// In AdminDashboard.js - Update the access type display
+const getAccessDisplay = (user) => {
+  if (user.isAdmin) return 'Admin (Unlimited)';
+  
+  const planName = user.subscription.plan.charAt(0).toUpperCase() + 
+                  user.subscription.plan.slice(1);
+  
+  if (!user.subscription.expiresAt) {
+    return `${planName} (No expiration)`;
+  }
+  
+  return `${planName} until ${new Date(user.subscription.expiresAt).toLocaleDateString()}`;
+};
   const handleApproveUser = async (userId) => {
     confirmAlert({
       title: 'Approve User',
@@ -216,53 +232,47 @@ const AdminDashboard = () => {
       <FaUsers /> All Users
     </Card.Header>
     <Card.Body>
-      <Table striped hover responsive>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Company</th>
-            <th>Status</th>
-            <th>Access</th>
-            <th>Actions</th>
+     <Table striped hover responsive>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Company</th>
+          <th>Status</th>
+          <th>Access Type</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {users.map(user => (
+          <tr key={user._id}>
+            <td>{user.fullName}</td>
+            <td>{user.email}</td>
+            <td>{user.companyName}</td>
+            <td>
+              {user.isApproved ? (
+                <Badge bg="success">Approved</Badge>
+              ) : (
+                <Badge bg="warning">Pending</Badge>
+              )}
+            </td>
+            <td>
+              {getAccessDisplay(user)}
+            </td>
+            <td>
+              <Button 
+                as={Link} 
+                to={`/dashboard/admin/users/${user._id}`}
+                variant="outline-primary" 
+                size="sm"
+              >
+                <FaUserCog /> Manage
+              </Button>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          {users.map(user => (
-            <tr key={user._id}>
-              <td>{user.fullName}</td>
-              <td>{user.email}</td>
-              <td>{user.companyName}</td>
-              <td>
-                {user.isApproved ? (
-                  <Badge bg="success">Approved</Badge>
-                ) : (
-                  <Badge bg="warning">Pending</Badge>
-                )}
-              </td>
-              <td>
-                {user.isUnlimited ? (
-                  <Badge bg="info">Unlimited</Badge>
-                ) : (
-                  <Badge bg="secondary">
-                    Until {new Date(user.trialEnd).toLocaleDateString()}
-                  </Badge>
-                )}
-              </td>
-              <td>
-                <Button 
-                  as={Link} 
-                  to={`/dashboard/admin/users/${user._id}`}
-                  variant="outline-primary" 
-                  size="sm"
-                >
-                  <FaUserCog /> Manage
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
+        ))}
+      </tbody>
+    </Table>
        <div className="p-3">
         
         <Button 

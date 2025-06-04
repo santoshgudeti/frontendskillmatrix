@@ -29,7 +29,7 @@ const Login = () => {
       <div className="auth-form bg-white">
         <div className="text-center mb-4">
         <h2 className="fw-bold">Welcome back</h2>
-          <p className="text-muted">Sign in to your TalentTrack ATS account</p>
+          <p className="text-muted">Sign in to your SkillMatrix ATS account</p>
           <div className=" d-flex justify-content-center align-items-center mb-4">
            
           </div>
