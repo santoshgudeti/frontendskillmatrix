@@ -34,6 +34,8 @@ const UserProfile = () => {
   };
 
  // Update the subscription section
+ 
+  // Update the subscription section
   const getSubscriptionStatus = () => {
     if (!user.subscription) return 'No active subscription';
     
@@ -54,6 +56,7 @@ const UserProfile = () => {
     
     return `${planName} Plan`;
   };
+
 
 
   const handleCloseModal = () => setShowModal(false);

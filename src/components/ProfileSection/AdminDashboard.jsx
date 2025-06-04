@@ -54,20 +54,21 @@ const AdminDashboard = () => {
     }
   };
 
-    // Add this helper function
-// In AdminDashboard.js - Update the access type display
-const getAccessDisplay = (user) => {
-  if (user.isAdmin) return 'Admin (Unlimited)';
-  
-  const planName = user.subscription.plan.charAt(0).toUpperCase() + 
-                  user.subscription.plan.slice(1);
-  
-  if (!user.subscription.expiresAt) {
-    return `${planName} (No expiration)`;
-  }
-  
-  return `${planName} until ${new Date(user.subscription.expiresAt).toLocaleDateString()}`;
-};
+  // Add this helper function
+  const getAccessDisplay = (user) => {
+    if (user.isAdmin) return 'Admin (Unlimited)';
+    
+    if (user.subscription.plan === 'paid') {
+      return `Paid until ${new Date(user.subscription.expiresAt).toLocaleDateString()}`;
+    }
+    
+    if (user.subscription.plan === 'free') {
+      return 'Free (Unlimited)';
+    }
+    
+    // For trial users
+    return `Trial until ${new Date(user.subscription.expiresAt).toLocaleDateString()}`;
+  };
   const handleApproveUser = async (userId) => {
     confirmAlert({
       title: 'Approve User',
