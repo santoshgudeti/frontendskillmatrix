@@ -229,19 +229,25 @@ const handleTimeout = async () => {
       setError('Invalid question data. Please refresh the page.');
       return;
     }
-
+  
     try {
       setIsProcessing(true);
       setUploadProgress(0);
       
       const formData = new FormData();
-        const filename = `answer-${currentQuestionIndex}.wav`;
-       formData.append('audio', audioBlob, filename);
+      const filename = `answer-${currentQuestionIndex}-${Date.now()}.wav`;
+      
+      // Ensure we have a valid blob
+      if (!audioBlob || audioBlob.size === 0) {
+        throw new Error('Invalid audio recording');
+      }
+  
+      formData.append('audio', audioBlob, filename);
       formData.append('token', token);
       formData.append('questionId', currentQuestion.id);
       formData.append('question', currentQuestionText);
       
-      await axiosInstance.post('/api/submit-voice-answer', formData, {
+      const response = await axiosInstance.post('/api/submit-voice-answer', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
@@ -249,12 +255,16 @@ const handleTimeout = async () => {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setUploadProgress(progress);
         },
-       
+        timeout: 30000 // 30 second timeout
       });
       
       setRecordedAnswers(prev => [
         ...prev, 
-        { questionId: currentQuestion.id, status: 'uploaded' }
+        { 
+          questionId: currentQuestion.id, 
+          status: response.data.valid ? 'uploaded' : 'invalid',
+          valid: response.data.valid
+        }
       ]);
       
       if (currentQuestionIndex < questions.length - 1) {
@@ -265,6 +275,7 @@ const handleTimeout = async () => {
     } catch (err) {
       console.error('Submission error:', err);
       setError(err.response?.data?.error || 
+              err.message || 
               'Failed to submit answer. Please check your connection and try again.');
     } finally {
       setIsProcessing(false);
