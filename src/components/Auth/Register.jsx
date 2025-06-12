@@ -17,6 +17,7 @@ const Register = () => {
     designation: '',
   });
 
+  const [loading, setLoading] = useState(false); // 👈 loading spinner control
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -24,20 +25,36 @@ const Register = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axiosInstance.post('/register', formData);
-      toast.success(res.data.message);
-      navigate('/login');
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
-    }
-  };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true); // ✅ START LOADING
+
+  try {
+    const res = await axiosInstance.post('/register', formData);
+    toast.success(res.data.message);
+    navigate('/login');
+  } catch (error) {
+    toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
+  } finally {
+    setLoading(false); // ✅ STOP LOADING
+  }
+};
+
 
 
   return (
       <div className="container">
+        {/* 🔄 Overlay Spinner */}
+      {loading && (
+        <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-white bg-opacity-75" style={{ zIndex: 9999 }}>
+          <div className="text-center">
+            <div className="spinner-border text-primary" style={{ width: '3rem', height: '3rem' }} role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <div className="mt-2 fw-semibold text-dark">Registering, please wait...</div>
+          </div>
+        </div>
+      )}
       <div className="auth-form bg-white">
         <div className="text-center mb-4">
           <h2 className="fw-bold">Apply for your Free trail</h2>
@@ -123,9 +140,9 @@ const Register = () => {
             required
           />
         </div>
-            <button type="submit" className="btn btn-primary w-100">
-              Register
-            </button>
+             <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+            {loading ? 'Processing...' : 'Register'}
+          </button>
           </form>
 
           <div className="mt-3 text-center">
