@@ -29,7 +29,7 @@ import {
 import '../Dashboard/UploadDocuments.css';
 import axios from "axios";
 import React, { useState, useEffect } from "react";
-import { Button, Modal, Form, Spinner, Alert, Dropdown } from 'react-bootstrap';
+import { Button, Modal, Form, Spinner, Alert, Dropdown,Tabs, Tab, Badge  } from 'react-bootstrap';
 import { io } from "socket.io-client";
 import { FaExpand, FaCompress } from "react-icons/fa";
 import { faGoogle, faMicrosoft} from '@fortawesome/free-brands-svg-icons';
@@ -72,6 +72,10 @@ function CandidateTable() {
   }
   const [showModal, setShowModal] = useState({});
   
+  // Add these new state variables
+  const [viewMode, setViewMode] = useState('all'); // 'all', 'recent', or 'history'
+  const [recentCandidates, setRecentCandidates] = useState([]);
+  const [historicalCandidates, setHistoricalCandidates] = useState([]);
 
   useEffect(() => {
     const socket = io("");
@@ -117,7 +121,22 @@ function CandidateTable() {
       fetchData();
     }, []);
 
-    
+    // Add this new useEffect while keeping all existing ones
+useEffect(() => {
+  const fetchSegmentedData = async () => {
+    try {
+      const response = await axiosInstance.get('/api/candidates/segmented');
+      setRecentCandidates(response.data.recent);
+      setHistoricalCandidates(response.data.history);
+    } catch (error) {
+      console.error('Error fetching segmented candidates:', error);
+      // Fallback to existing behavior if segmented endpoint fails
+      setRecentCandidates([]);
+      setHistoricalCandidates([]);
+    }
+  };
+  fetchSegmentedData();
+}, []);
       const sendTestLink = async (candidateEmail, jobTitle, resumeId, jdId) => {
         setShowGenerationModal(true);
         setGenerationStatus({
@@ -435,9 +454,56 @@ function CandidateTable() {
       <p>Loading candidate data...</p>
     </div>
   );
+
+// Add this component near the top of your return statement
+const renderViewToggle = () => (
+  <div className="view-toggle mb-3 d-flex justify-content-center">
+    <Button 
+      variant={viewMode === 'all' ? 'primary' : 'outline-primary'}
+      onClick={() => setViewMode('all')}
+      className="me-2"
+    >
+      All Candidates
+    </Button>
+    <Button 
+      variant={viewMode === 'recent' ? 'primary' : 'outline-primary'}
+      onClick={() => setViewMode('recent')}
+      className="me-2"
+    >
+      Recent Uploads
+      {recentCandidates.length > 0 && (
+        <Badge bg="danger" className="ms-2">
+          {recentCandidates.length}
+        </Badge>
+      )}
+    </Button>
+    <Button 
+      variant={viewMode === 'history' ? 'primary' : 'outline-primary'}
+      onClick={() => setViewMode('history')}
+    >
+      History
+    </Button>
+  </div>
+);
+
+const candidatesToDisplay = viewMode === 'recent' 
+  ? recentCandidates 
+  : viewMode === 'history'
+    ? historicalCandidates
+    : filteredMembers;
+
+    // Sort the candidates based on the current view
+  const sortedCandidatesToDisplay = [...candidatesToDisplay].sort((a, b) => {
+    const aMatch = a.matchingResult?.[0]?.["Resume Data"]?.["Matching Percentage"] || 0;
+    const bMatch = b.matchingResult?.[0]?.["Resume Data"]?.["Matching Percentage"] || 0;
+    return bMatch - aMatch; // Descending order
+  });
+
+
   return (
     <div className="card border-0 responsedisplay  shadow-sm">
-    <div className="filter-buttons-container p-3 border-bottom bg-light">
+      {renderViewToggle()}
+   <div className="filter-buttons-container p-3 border-bottom bg-dark d-flex justify-content-center">
       <div className="d-flex flex-wrap gap-2 align-items-center">
         {Object.keys(filterIcons).map((filter) => (
           <Button
@@ -452,20 +518,23 @@ function CandidateTable() {
         ))}
   
           <Button
-          variant="outline-secondary danger"
-          className="d-flex align-items-center gap-2 reset-all-btn"
+         variant="outline-dark"
+            className="d-flex align-items-center gap-2 filter-btn bg-white"
           onClick={resetAllFilters}
         >
-          <FontAwesomeIcon icon={faRotateRight} /> Reset All
+          <FontAwesomeIcon icon={faRotateRight} /> 
+          <span className="text-black">Reset All</span>
         </Button>
   
         <Button
-        variant="outline-secondary"
-        className="d-flex align-items-center gap-2 search-btn"
+            variant="outline-dark"
+            className="d-flex align-items-center gap-2 filter-btn bg-white"
           onClick={applyFilters}
         >
        <FontAwesomeIcon icon={faMagnifyingGlass} />
-          Search
+       <FontAwesomeIcon icon={faRotateRight} /> 
+          <span className="text-black">Search</span>
+          
         </Button>
         
         {Object.keys(filterIcons).map((filter) => (
@@ -527,8 +596,9 @@ function CandidateTable() {
       </div>
     </div>
 
-  <div className="container mt-4">
-        <h2 className="mb-4 text-center">Candidate Assessment Dashboard</h2>
+<div className="container-fluid mt-4 px-0">
+
+
         
         {/* Generation Status Modal */}
         <Modal show={showGenerationModal} onHide={() => setShowGenerationModal(false)} centered>
@@ -574,12 +644,14 @@ function CandidateTable() {
             </tr>
           </thead>
           <tbody>
-          {sortedFilteredMembers.map((result, index) => {
+      {sortedCandidatesToDisplay.map((result, index) => {
               const resumeData = result.matchingResult?.[0]?.["Resume Data"] || {};
               const email = resumeData.email || "N/A";
               const session = result.assessmentSession;
               const testScore = result.testScore; // Updated variable name  
-           
+           const isRecent = recentCandidates.some(rc => 
+              rc._id === result._id
+            );
               const getStatusBadge = () => {
                 if (!session) return <span className="badge bg-secondary">Not Sent</span>;
                 switch (session.status) {
@@ -590,9 +662,15 @@ function CandidateTable() {
               };
            return(
                 <React.Fragment key={result._id || index}>
-                <tr className={expandedRow === result._id ? "expanded-row" : ""}>
-                  <td >
-                    <span className="badge bg-primary">{index + 1}</span>
+                   <tr className={`${expandedRow === result._id ? "expanded-row" : ""} ${isRecent ? "recent-candidate" : ""}`}>
+                    <td>
+                      {isRecent && viewMode !== 'recent' && (
+                        <Badge bg="success" className="me-2">
+                          New
+                        </Badge>
+                      )}
+                <span className="badge bg-white text-dark">{index + 1}</span>
+
                   </td>
                   <td >
                     <div className="d-flex align-items-center">
@@ -810,6 +888,7 @@ function CandidateTable() {
                                           </button>
                                         )}
                                       </td>
+                                         
                     
                 </tr>
                 {expandedRow === result._id && (
@@ -865,12 +944,14 @@ function CandidateTable() {
                     </td>
                     
                     
+                    
                   </tr>
                    
                 )}
               </React.Fragment>
               );
           })}
+          
           </tbody>
         </table>
       </div>

@@ -44,33 +44,34 @@ function Header({ onResponseSubmit }) {
   };
 
   return (
-    <div className="dashboard-header">
+    <div className="dashboard-header align-items-center">
       <div className="d-flex flex-column w-100">
         {/* Top purple header */}
         <div
           className="px-4 py-3 d-flex align-items-center"
-          style={{ backgroundColor: "#8B5CF6" }}
+         style={{ backgroundColor: 'rgb(63 51 196 / 31%)' }}
+
         >
           {/* Empty div to balance the flex layout */}
           <div className="flex-grow-1"></div>
           
           {/* Centered Navigation Links */}
-          <div className="d-flex gap-2 justify-content-center">
+          <div className="d-flex px-3 gap-3 ">
             <Link
               to="/dashboard/candidates"
-              className={`btn px-3 py-2 fw-medium ${currentPath === "/dashboard/candidates" ? "active-nav" : "inactive-nav"}`}
+              className={`btn fw-medium ${currentPath === "/dashboard/candidates" ? "active-nav" : "inactive-nav"}`}
             >
               All candidates
             </Link>
             <Link
               to="/dashboard/response"
-              className={`btn px-3 py-2 fw-medium ${currentPath === "/dashboard/response" ? "active-nav" : "inactive-nav"}`}
+              className={`btn fw-medium ${currentPath === "/dashboard/response" ? "active-nav" : "inactive-nav"}`}
             >
               Response
             </Link>
             <Link
               to="/dashboard/upload"
-              className={`btn px-3 py-2 fw-medium ${currentPath === "/dashboard/upload" ? "active-nav" : "inactive-nav"}`}
+              className={`btn  fw-medium ${currentPath === "/dashboard/upload" ? "active-nav" : "inactive-nav"}`}
             >
               Upload Documents
             </Link>
