@@ -48,37 +48,55 @@ function Header({ onResponseSubmit }) {
       <div className="d-flex flex-column w-100">
         {/* Top purple header */}
         <div
-          className="px-4 py-3 d-flex align-items-center"
+     className="px-4 py-3 d-flex align-items-center justify-content-between position-relative"
          style={{ backgroundColor: 'rgb(63 51 196 / 31%)' }}
-
         >
-          {/* Empty div to balance the flex layout */}
-          <div className="flex-grow-1"></div>
-          
-          {/* Centered Navigation Links */}
-          <div className="d-flex px-3 gap-3 ">
+               {/* Left side empty placeholder if needed */}
+      <div className="d-flex" style={{ width: '200px' }}></div>
+
+      {/* Centered Navigation Links */}
+      <div
+        className="d-flex gap-3 position-absolute start-50 translate-middle-x"
+        style={{ zIndex: 1 }}
+      >
+
             <Link
               to="/dashboard/candidates"
-              className={`btn fw-medium ${currentPath === "/dashboard/candidates" ? "active-nav" : "inactive-nav"}`}
-            >
+                className={`btn fw-medium shadow-sm px-3 py-2 rounded-pill ${currentPath === "/dashboard/candidates" ? "active-nav" : "inactive-nav"}`}
+           style={{
+           backgroundColor: "rgb(125 117 221 / 46%)",
+            color: "black",
+            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
+          }}
+          >
               All candidates
             </Link>
             <Link
               to="/dashboard/response"
-              className={`btn fw-medium ${currentPath === "/dashboard/response" ? "active-nav" : "inactive-nav"}`}
-            >
+                  className={`btn fw-medium shadow-sm px-3 py-2 rounded-pill ${currentPath === "/dashboard/response" ? "active-nav" : "inactive-nav"}`}
+               style={{
+             backgroundColor: "rgb(125 117 221 / 46%)",
+              color: "black",
+              boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
+            }}
+                    >
               Response
             </Link>
             <Link
               to="/dashboard/upload"
-              className={`btn  fw-medium ${currentPath === "/dashboard/upload" ? "active-nav" : "inactive-nav"}`}
+                className={`btn fw-medium shadow-sm px-3 py-2 rounded-pill${currentPath === "/dashboard/upload" ? "active-nav" : "inactive-nav"}`}
+               style={{
+            backgroundColor: "rgb(125 117 221 / 46%)",
+            color: "black",
+            boxShadow: "1px 1px 3px rgb(0, 0, 0)",
+          }}
             >
               Upload Documents
             </Link>
           </div>
           
           {/* Profile Section - Pushed to right */}
-          <div className="flex-grow-1 d-flex justify-content-end">
+          <div className="d-flex justify-content-end">
             <Link
               to={user.isAdmin ? "/dashboard/admin" : "/dashboard/user"}
               className="btn btn-light d-flex align-items-center px-3 py-2"

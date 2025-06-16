@@ -249,100 +249,109 @@ function ResponseTable({ data, duplicateCount  }) {
     setExpandedRow(expandedRow === id ? null : id)
   }
   return (
-      <div className="card border-0 responsedisplay shadow-sm overflow-hidden">
-        <div className="filter-buttons-container p-3 border-bottom bg-light">
-              <div className="d-flex flex-wrap gap-2 align-items-center">
-                {Object.keys(filterIcons).map((filter) => (
-                  <Button
-                    key={filter}
-                    variant="outline-dark"
-                    className="d-flex align-items-center gap-2 filter-btn bg-white"
-                    onClick={() => toggleModal(filter)}
-                  >
-                    <FontAwesomeIcon icon={filterIcons[filter]} className="text-black" />
-                    <span className="text-black">{filter.charAt(0).toUpperCase() + filter.slice(1)}</span>
-                  </Button>
-                ))}
+     <div className="card border-0 responsedisplay  shadow-sm">
+   <div
+        className="filter-buttons-container p-3 border-bottom d-flex justify-content-center"
+        style={{ backgroundColor: 'rgb(63 51 196 / 31%)' }}
+      >
+   <div className="d-flex flex-wrap gap-2 align-items-center">
+        {Object.keys(filterIcons).map((filter) => (
+          <Button
+            key={filter}
+            variant="outline-dark"
+            className="d-flex align-items-center gap-2 filter-btn bg-white"
+            onClick={() => toggleModal(filter)}
+          >
+            <FontAwesomeIcon icon={filterIcons[filter]} className="text-black" />
+            <span className="text-black">{filter.charAt(0).toUpperCase() + filter.slice(1)}</span>
+          </Button>
+        ))}
+  
+          <Button
+         variant="outline-dark"
+            className="d-flex align-items-center gap-2 filter-btn bg-white"
+          onClick={resetAllFilters}
+        >
+          <FontAwesomeIcon icon={faRotateRight} /> 
+          <span className="text-black">Reset All</span>
+        </Button>
+  
+        <Button
+            variant="outline-none"
+            className="d-flex align-items-center gap-2 filter-btn bg-white"
+          onClick={applyFilters}
+        >
+       <FontAwesomeIcon icon={faMagnifyingGlass} />
+       <FontAwesomeIcon icon={faRotateRight} /> 
+          <span className="text-black">Search</span>
           
-                  <Button
-                  variant="outline-secondary danger"
-                  className="d-flex align-items-center gap-2 reset-all-btn"
-                  onClick={resetAllFilters}
-                >
-                  <FontAwesomeIcon icon={faRotateRight} /> Reset All
-                </Button>
-          
-                <Button
-                variant="outline-secondary"
-                className="d-flex align-items-center gap-2 search-btn"
-                  onClick={applyFilters}
-                >
-               <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  Search
-                </Button>
-                
-                {Object.keys(filterIcons).map((filter) => (
-                  <Modal
-                    key={filter}
-                    show={showModal[filter] || false}
-                    onHide={() => toggleModal(filter)}
-                    centered
-                    className="filter-modal"
-                    style={{ background: "rgba(0, 0, 0, 0.5)" }}
-                  >
-                    <Modal.Header closeButton>
-                      <Modal.Title className="d-flex align-items-center gap-2">
-                        <FontAwesomeIcon icon={filterIcons[filter]} className="text-primary" />
-                        {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                      </Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body>
-                      <div className="filter-options">
-                        <Form>
-                          <Form.Check
-                            type="checkbox"
-                            label="Select All"
-                            checked={allSelected[filter] || false}
-                            onChange={(e) => {
-                              const isSelected = e.target.checked;
-                              const allValues = extractUniqueValues(filter);
-                              setAllSelected((prev) => ({ ...prev, [filter]: isSelected }));
-                              handleFilterChange(filter, isSelected ? allValues : []);
-                            }}
-                          />
-                          {extractUniqueValues(filter).map((value, index) => (
-                            <Form.Check
-                              key={index}
-                              type="checkbox"
-                              label={value}
-                              checked={selectedFilters[filter]?.includes(value) || false}
-                              onChange={(e) => {
-                                const selected = e.target.checked
-                                  ? [...(selectedFilters[filter] || []), value]
-                                  : selectedFilters[filter].filter((v) => v !== value);
-                                handleFilterChange(filter, selected);
-                              }}
-                            />
-                          ))}
-                        </Form>
-                      </div>
-                    </Modal.Body>
-                    <Modal.Footer className="justify-content-between">
-                      <Button variant="secondary" onClick={() => handleFilterChange(filter, [])}>
-                        Reset
-                      </Button>
-                      <Button variant="primary" onClick={applyFilters}>
-                        Apply
-                      </Button>
-                    </Modal.Footer>
-                  </Modal>
-                ))}
+        </Button>
+        
+        {Object.keys(filterIcons).map((filter) => (
+          <Modal
+            key={filter}
+            show={showModal[filter] || false}
+            onHide={() => toggleModal(filter)}
+            centered
+            className="filter-modal"
+            style={{ background: "rgba(255, 255, 255, 0.68)" }}
+          >
+
+      <div style={{  backgroundColor: 'rgb(215 211 255 / 82%)', borderRadius: '8px' }}>
+            <Modal.Header closeButton>
+              <Modal.Title className="d-flex align-items-center gap-2">
+                <FontAwesomeIcon icon={filterIcons[filter]} className="text-primary" />
+                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <div className="filter-options">
+                <Form>
+                  <Form.Check
+                    type="checkbox"
+                    label="Select All"
+                    checked={allSelected[filter] || false}
+                    onChange={(e) => {
+                      const isSelected = e.target.checked;
+                      const allValues = extractUniqueValues(filter);
+                      setAllSelected((prev) => ({ ...prev, [filter]: isSelected }));
+                      handleFilterChange(filter, isSelected ? allValues : []);
+                    }}
+                  />
+                  {extractUniqueValues(filter).map((value, index) => (
+                    <Form.Check
+                      key={index}
+                      type="checkbox"
+                      label={value}
+                      checked={selectedFilters[filter]?.includes(value) || false}
+                      onChange={(e) => {
+                        const selected = e.target.checked
+                          ? [...(selectedFilters[filter] || []), value]
+                          : selectedFilters[filter].filter((v) => v !== value);
+                        handleFilterChange(filter, selected);
+                      }}
+                    />
+                  ))}
+                </Form>
               </div>
+            </Modal.Body>
+            <Modal.Footer className="justify-content-between">
+              <Button variant="secondary" onClick={() => handleFilterChange(filter, [])}>
+                Reset
+              </Button>
+              <Button variant="primary" onClick={applyFilters}>
+                Apply
+              </Button>
+            </Modal.Footer>
             </div>
+          </Modal>
+        ))}
+      </div>
+    </div>
         <div className="table-responsive">
         <ToastContainer/>
           <table className="table table-hover align-middle mb-0">
-            <thead className="bg-light">
+                 <thead className="table candidate-table-header">
               <tr>
                 <th style={{ padding: "16px 24px" }}>Rank</th>
                 <th style={{ padding: "16px 24px" }}>Candidate</th>
@@ -388,20 +397,25 @@ function ResponseTable({ data, duplicateCount  }) {
                       </div>
                     </td>
                     <td style={{ padding: "16px 24px" }}>
-                                        <div className="d-flex gap-2">
-                                        <Dropdown>
-                                              <Dropdown.Toggle
-                                            
-                                                size="sm"
-                                    
-                                                className="custom-dropdown bg-dark"
-                                                
-                                              >
-                                                <FontAwesomeIcon icon={faFileAlt} className="me-1" />
-                                                
-                                              </Dropdown.Toggle>
-                                              <Dropdown.Menu className="custom-dropdown-menu">
-                                              <Dropdown.Item 
+                            <div className="d-flex gap-2">
+                              <Dropdown>
+                            <Dropdown.Toggle
+                          
+                              size="sm"
+                              id={`resume-dropdown-${result._id}`}
+                              className="custom-dropdown"
+                                style={{ backgroundColor: 'rgb(63 51 196 / 31%)' }}
+  
+                              
+                            >
+                              <FontAwesomeIcon icon={faFileAlt} className="me-1" />
+                              
+                            </Dropdown.Toggle>
+                            <Dropdown.Menu className="custom-dropdown-menu"
+                              style={{ backgroundColor: 'rgb(215 211 255 / 82%)' }}
+                            >
+                        
+                                <Dropdown.Item 
                                 as="a" 
                                 href="#" 
                                 onClick={async (e) => {
@@ -442,15 +456,20 @@ function ResponseTable({ data, duplicateCount  }) {
                                             </Dropdown>
                                          
                                           <Dropdown>
-                                              <Dropdown.Toggle
-                                               variant="outline-none"
-                                               size="sm"
-                                    
-                                               className="custom-dropdown text-black bg-light">
+                                    <Dropdown.Toggle
+                                      variant="outline-none"
+                                      size="sm"
+                                      className="custom-dropdown text-white border-0"
+                                      style={{ backgroundColor: '#56629cb8' }}
+                                      
+                                    >
                                                 <FontAwesomeIcon icon={faCalendarAlt}  className="me-1" />
                                                 Interview
                                               </Dropdown.Toggle>
-                                              <Dropdown.Menu>
+                                              <Dropdown.Menu
+                                              style={{ backgroundColor: 'rgb(215 211 255 / 82%)' }}
+                                              >
+
                                                 <Dropdown.Item
                                                   href={`https://calendar.google.com/calendar/render?action=TEMPLATE&add=${encodeURIComponent(resumeData.email || "")}&text=${encodeURIComponent(`Interview - ${resumeData["Job Title"] || "Job Title"}`)}`}
                                                   target="_blank"
@@ -477,10 +496,12 @@ function ResponseTable({ data, duplicateCount  }) {
                                                 </Dropdown.Item>
                                               </Dropdown.Menu>
                                             </Dropdown>
+                                            
                         <button
-                           className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 text-white bg-black"
+                                 className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 text-white"
                           onClick={() => toggleExpandRow(index)}
                           title="Toggle Details"
+                         style={{ backgroundColor: 'rgb(63 51 196 / 31%)' }}
                         >
                               Details
                           <FontAwesomeIcon icon={expandedRow === index ? faChevronUp : faChevronDown} />
@@ -490,49 +511,60 @@ function ResponseTable({ data, duplicateCount  }) {
                   </tr>
                   {expandedRow === index && (
                     <tr className="expanded-content">
-                      <td colSpan="6">
-                        <div className="p-4 bg-light">
+                      <td colSpan="6"
+                      style={{ backgroundColor: 'rgb(63 51 196 / 31%)' }}
+                      >
+                           <div
+                        className="p-4 rounded shadow-sm text-white"
+                        style={{ backgroundColor: 'rgb(63 51 196 / 31%)' }}
+                      >
                           <div className="row">
                             <div className="col-md-6">
-                              <h6 className="mb-3">Contact Information</h6>
-                              <p>
-                                <strong>Mobile:</strong> {resumeData.mobile_number || "N/A"}
-                              </p>
-                              <p>
-                                <strong>Email:</strong> {resumeData.email || "N/A"}
-                              </p>
-                            </div>
-                            <div className="col-md-6">
-                              <h6 className="mb-3">Professional Details</h6>
-                              <p>
-                                <strong>Designation:</strong> {resumeData.designation}
-                              </p>
-                              <p>
-                                <strong>Degree:</strong> {resumeData.degree?.join(", ") || "N/A"}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="row mt-3">
-                            <div className="col-md-6">
-                              <h6 className="mb-3">Skills</h6>
-                              <div className="d-flex flex-wrap gap-2">
-                                {resumeData.skills?.map((skill, index) => (
-                                    <span key={index} className="badge bg-secondary">
-                                      {skill}
-                                    </span>
-                                  )) || (
-                                    <span className="text-muted">No skills available</span>
-                                  )}
-                              </div>
-                            </div>
-                            <div className="col-md-6">
-                              <h6 className="mb-3">Previous Companies</h6>
-                              <ul className="list-unstyled">
-                                {resumeData.company_names?.map((company, index) => (
-                                  <li key={index} className="mb-1">
-                                    <FontAwesomeIcon icon={faStar} className="text-warning me-2" />
-                                    {company}
-                                  </li>
+                                <h6 className="mb-3 text-black text-decoration-underline"><strong>Contact Information</strong></h6>
+                                                          <p className="text-black ">
+                                                            <strong>Mobile : </strong> {resumeData.mobile_number || "N/A"}
+                                                          </p>
+                                                        
+                                                            <p className="text-black ">
+                                                        <strong>Email: </strong>
+                                                        {resumeData.email ? (
+                                                          <span className="badge bg-black">{resumeData.email}</span>
+                                                        ) : (
+                                                          "N/A"
+                                                        )}
+                                                              </p>
+                                                        </div>
+                                                        <div className="col-md-6">
+                                                          <h6 className="mb-3 text-black text-decoration-underline"><strong>Professional Details</strong></h6>
+                                                            <p className="text-black ">
+                                                            <strong>Designation : </strong> {resumeData.designation}
+                                                          </p>
+                                                            <p className="text-black ">
+                                                            <strong>Degree : </strong> {resumeData.degree?.join(", ") || "N/A"}
+                                                          </p>
+                                                        </div>
+                                                      </div>
+                                                      <div className="row mt-3">
+                                                        <div className="col-md-6">
+                                                          <h6 className="mb-3 text-black"> <strong>Skills : </strong></h6>
+                                                          <div className="d-flex flex-wrap gap-2">
+                                                            {resumeData.skills?.map((skill, index) => (
+                                                                <span key={index} className="badge bg-black">
+                                                                  {skill}
+                                                                </span>
+                                                              )) || (
+                                                                <span className="text-black">No skills available</span>
+                                                              )}
+                                                          </div>
+                                                        </div>
+                                                        <div className="col-md-6">
+                                                          <h6 className="mb-3 text-black"><strong>Previous Companies : </strong></h6>
+                                                          <ul className="list-unstyled">
+                                                            {resumeData.company_names?.map((company, index) => (
+                                                              <li key={index} className="mb-1">
+                                                                <FontAwesomeIcon icon={faStar} className="text-warning me-2" />
+                                                                {company}
+                                                              </li>
                                 ))}
                               </ul>
                             </div>

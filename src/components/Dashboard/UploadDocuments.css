@@ -1,4 +1,12 @@
 /*candidate: Dashboard Upload Documents CSS */
+.candidate-table-header th {
+  font-family: 'Poppins', sans-serif; /* Or 'Inter', sans-serif */
+  background-color: rgba(88, 74, 244, 0.31);
+  color: #000; /* optional: to ensure text is visible */
+   font-weight: 600;
+  font-size: 15px;
+  
+}
 
 /* Floating image animation */
 .floating-image {

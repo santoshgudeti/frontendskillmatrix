@@ -457,32 +457,30 @@ useEffect(() => {
 
 // Add this component near the top of your return statement
 const renderViewToggle = () => (
-  <div className="view-toggle mb-3 d-flex justify-content-center">
+  <div className="view-toggle mb-1 mt-1 d-flex justify-content-center">
     <Button 
       variant={viewMode === 'all' ? 'primary' : 'outline-primary'}
       onClick={() => setViewMode('all')}
-      className="me-2"
+      className="me-2 text-black"
+        style={{ backgroundColor: 'rgb(63 51 196 / 31%)' }}
     >
       All Candidates
     </Button>
     <Button 
       variant={viewMode === 'recent' ? 'primary' : 'outline-primary'}
       onClick={() => setViewMode('recent')}
-      className="me-2"
+      className="me-2 text-black"
+       style={{ backgroundColor: 'rgb(63 51 196 / 31%)' }}
     >
       Recent Uploads
       {recentCandidates.length > 0 && (
-        <Badge bg="danger" className="ms-2">
+        <Badge bg="danger" className="ms-2" >
+          
           {recentCandidates.length}
         </Badge>
       )}
     </Button>
-    <Button 
-      variant={viewMode === 'history' ? 'primary' : 'outline-primary'}
-      onClick={() => setViewMode('history')}
-    >
-      History
-    </Button>
+   
   </div>
 );
 
@@ -503,7 +501,10 @@ const candidatesToDisplay = viewMode === 'recent'
   return (
     <div className="card border-0 responsedisplay  shadow-sm">
       {renderViewToggle()}
-   <div className="filter-buttons-container p-3 border-bottom bg-dark d-flex justify-content-center">
+<div
+  className="filter-buttons-container p-3 border-bottom d-flex justify-content-center"
+  style={{ backgroundColor: 'rgb(63 51 196 / 31%)' }}
+>
       <div className="d-flex flex-wrap gap-2 align-items-center">
         {Object.keys(filterIcons).map((filter) => (
           <Button
@@ -527,7 +528,7 @@ const candidatesToDisplay = viewMode === 'recent'
         </Button>
   
         <Button
-            variant="outline-dark"
+            variant="outline-none"
             className="d-flex align-items-center gap-2 filter-btn bg-white"
           onClick={applyFilters}
         >
@@ -544,8 +545,10 @@ const candidatesToDisplay = viewMode === 'recent'
             onHide={() => toggleModal(filter)}
             centered
             className="filter-modal"
-            style={{ background: "rgba(0, 0, 0, 0.5)" }}
+            style={{ background: "rgba(255, 255, 255, 0.68)" }}
           >
+
+      <div style={{  backgroundColor: 'rgb(215 211 255 / 82%)', borderRadius: '8px' }}>
             <Modal.Header closeButton>
               <Modal.Title className="d-flex align-items-center gap-2">
                 <FontAwesomeIcon icon={filterIcons[filter]} className="text-primary" />
@@ -591,6 +594,7 @@ const candidatesToDisplay = viewMode === 'recent'
                 Apply
               </Button>
             </Modal.Footer>
+            </div>
           </Modal>
         ))}
       </div>
@@ -628,7 +632,7 @@ const candidatesToDisplay = viewMode === 'recent'
         </Modal>
       <div className="table-responsive">
        <table className="table table-striped table-hover">
-          <thead className="table-dark">
+          <thead className="table candidate-table-header">
              <tr>
               <th>Rank</th>
               <th>Candidate</th>
@@ -705,13 +709,17 @@ const candidatesToDisplay = viewMode === 'recent'
                         
                             size="sm"
                             id={`resume-dropdown-${result._id}`}
-                            className="custom-dropdown bg-dark"
+                            className="custom-dropdown"
+                              style={{ backgroundColor: 'rgb(63 51 196 / 31%)' }}
+
                             
                           >
                             <FontAwesomeIcon icon={faFileAlt} className="me-1" />
                             
                           </Dropdown.Toggle>
-                          <Dropdown.Menu className="custom-dropdown-menu">
+                          <Dropdown.Menu className="custom-dropdown-menu"
+                            style={{ backgroundColor: 'rgb(215 211 255 / 82%)' }}
+                          >
                       
                               <Dropdown.Item 
                                 as="a" 
@@ -725,7 +733,7 @@ const candidatesToDisplay = viewMode === 'recent'
                                 }}
                                 className="custom-dropdown-item"
                               >
-                                <FontAwesomeIcon icon={faEye} className="me-2 text-primary" />
+                                <FontAwesomeIcon icon={faEye} className="me-2 text-dark" />
                                 View Resume
                               </Dropdown.Item>
                               <Dropdown.Item 
@@ -747,7 +755,7 @@ const candidatesToDisplay = viewMode === 'recent'
                                 }}
                                 className="custom-dropdown-item"
                               >
-                                <FontAwesomeIcon icon={faDownload} className="me-2 text-success" />
+                                <FontAwesomeIcon icon={faDownload} className="me-2 text-dark" />
                                 Download Resume
                               </Dropdown.Item>
                               <Dropdown.Item 
@@ -762,7 +770,7 @@ const candidatesToDisplay = viewMode === 'recent'
                                 }}
                                 className="custom-dropdown-item"
                               >
-                                <FontAwesomeIcon icon={faEye} className="me-2 text-primary" />
+                                <FontAwesomeIcon icon={faEye} className="me-2 text-dark" />
                                 View JD
                               </Dropdown.Item>
                           </Dropdown.Menu>
@@ -770,16 +778,21 @@ const candidatesToDisplay = viewMode === 'recent'
                         </div>
                      </td>
                       <td>
-                      <Dropdown>
+                              <Dropdown>
                           <Dropdown.Toggle
-                           variant="outline-none"
-                           size="sm"
-                
-                           className="custom-dropdown text-black bg-light">
-                            <FontAwesomeIcon icon={faCalendarAlt}  className="me-1" />
+                            variant="outline-none"
+                            size="sm"
+                            className="custom-dropdown text-white border-0"
+                            style={{ backgroundColor: '#56629cb8' }}
+                            
+                          >
+                            <FontAwesomeIcon icon={faCalendarAlt} className="me-1" />
                             Interview
                           </Dropdown.Toggle>
-                          <Dropdown.Menu>
+                          <Dropdown.Menu
+                           style={{ backgroundColor: 'rgb(215 211 255 / 82%)' }}
+                          >
+                            
                             <Dropdown.Item
                               href={`https://calendar.google.com/calendar/render?action=TEMPLATE&add=${encodeURIComponent(resumeData.email || "")}&text=${encodeURIComponent(`Interview - ${resumeData["Job Title"] || "Job Title"}`)}`}
                               target="_blank"
@@ -810,9 +823,11 @@ const candidatesToDisplay = viewMode === 'recent'
 
                    <td>                  
                         <button
-                        className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 text-white bg-black"
+                        className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 text-white"
                         onClick={() => toggleExpandRow(result._id)}
                         title="Toggle Details"
+                          style={{ backgroundColor: 'rgb(63 51 196 / 31%)' }}
+                        
                       >
                         Details
                         <FontAwesomeIcon icon={expandedRow === result._id ? faChevronUp : faChevronDown} />
@@ -826,18 +841,23 @@ const candidatesToDisplay = viewMode === 'recent'
                                 <Dropdown 
                                   onClick={(e) => e.stopPropagation()}
                                   className="score-dropdown"
+                                  
                                 >
                                   <Dropdown.Toggle 
                                     variant="outline-primary" 
                                     id={`score-dropdown-${result._id}`}
                                     className="d-flex align-items-center justify-content-between"
+                                    
+                                      style={{ backgroundColor: 'rgb(250 250 255 / 70%);' }}
                                   >
                                     <span className="fw-bold">
                                       {testScore.combinedScore !== undefined ? `${testScore.combinedScore}%` : 'N/A'}
                                     </span>
                                   </Dropdown.Toggle>
                                   
-                                  <Dropdown.Menu>
+                                  <Dropdown.Menu
+                                  
+                                    style={{ backgroundColor: 'rgb(215 211 255 / 95%)' }}>
                                     <Dropdown.Header>Score Breakdown</Dropdown.Header>
                                     <Dropdown.ItemText className="d-flex justify-content-between">
                                       <span>MCQ Score:</span>
@@ -873,6 +893,7 @@ const candidatesToDisplay = viewMode === 'recent'
                                         {!session || session.status === 'pending' ? (
                                           <button
                                             className="btn btn-sm btn-primary"
+                                               style={{ backgroundColor: '#56629cb8' }}
                                             onClick={() => sendTestLink(
                                               email,
                                               resumeData["Job Title"],
@@ -889,47 +910,61 @@ const candidatesToDisplay = viewMode === 'recent'
                                         )}
                                       </td>
                                          
-                    
-                </tr>
-                {expandedRow === result._id && (
-                  <tr className="expanded-content">
-                    <td colSpan="6">
-                      <div className="p-4 bg-light">
-                        <div className="row">
-                          <div className="col-md-6">
-                            <h6 className="mb-3">Contact Information</h6>
-                            <p>
-                              <strong>Mobile:</strong> {resumeData.mobile_number || "N/A"}
+                            
+                        </tr>
+                        {expandedRow === result._id && (
+                          <tr className="expanded-content"
+                          >
+                            <td colSpan="12"
+                              style={{ backgroundColor: 'rgb(213 211 254 / 68%)' }}
+                            >
+                              <div
+                        className="p-4 rounded shadow-sm text-white"
+                        style={{ backgroundColor: 'rgb(213 211 254 / 68%)' }}
+                      >
+                                        <div className="row">
+                          <div className="col-md-6"
+                          
+                          >
+                            <h6 className="mb-3 text-black text-decoration-underline"><strong>Contact Information</strong></h6>
+                            <p className="text-black ">
+                              <strong>Mobile : </strong> {resumeData.mobile_number || "N/A"}
                             </p>
-                            <p>
-                              <strong>Email:</strong> {resumeData.email || "N/A"}
-                            </p>
+                          
+                              <p className="text-black ">
+                          <strong>Email: </strong>
+                          {resumeData.email ? (
+                            <span className="badge bg-black">{resumeData.email}</span>
+                          ) : (
+                            "N/A"
+                          )}
+                                </p>
                           </div>
                           <div className="col-md-6">
-                            <h6 className="mb-3">Professional Details</h6>
-                            <p>
-                              <strong>Designation:</strong> {resumeData.designation}
+                            <h6 className="mb-3 text-black text-decoration-underline"><strong>Professional Details</strong></h6>
+                              <p className="text-black ">
+                              <strong>Designation : </strong> {resumeData.designation}
                             </p>
-                            <p>
-                              <strong>Degree:</strong> {resumeData.degree?.join(", ") || "N/A"}
+                              <p className="text-black ">
+                              <strong>Degree : </strong> {resumeData.degree?.join(", ") || "N/A"}
                             </p>
                           </div>
                         </div>
                         <div className="row mt-3">
                           <div className="col-md-6">
-                            <h6 className="mb-3">Skills</h6>
+                            <h6 className="mb-3 text-black"> <strong>Skills : </strong></h6>
                             <div className="d-flex flex-wrap gap-2">
                               {resumeData.skills?.map((skill, index) => (
-                                  <span key={index} className="badge bg-secondary">
+                                  <span key={index} className="badge bg-black">
                                     {skill}
                                   </span>
                                 )) || (
-                                  <span className="text-muted">No skills available</span>
+                                  <span className="text-black">No skills available</span>
                                 )}
                             </div>
                           </div>
                           <div className="col-md-6">
-                            <h6 className="mb-3">Previous Companies</h6>
+                            <h6 className="mb-3 text-black"><strong>Previous Companies : </strong></h6>
                             <ul className="list-unstyled">
                               {resumeData.company_names?.map((company, index) => (
                                 <li key={index} className="mb-1">
