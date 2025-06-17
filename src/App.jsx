@@ -10,6 +10,9 @@ import InterviewPlatform from './components/TestPlatform/InterviewPlatform';
 import Quiz from './components/TestPlatform/Quiz';
 import LandingLayout from './components/Layouts/LandingLayout';
 import { ToastContainer } from 'react-toastify';
+
+import ForgotPassword from './components/Auth/ForgotPassword';
+import ResetPassword from './components/Auth/ResetPassword';
 import './App.css';
 import './styles.css';
 
@@ -41,6 +44,23 @@ function App() {
           element={
             <LandingLayout>
               <Register />
+            </LandingLayout>
+          }
+        />
+
+        <Route
+          path="/forgot-password"
+          element={
+            <LandingLayout>
+              <ForgotPassword />
+            </LandingLayout>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <LandingLayout>
+              <ResetPassword />
             </LandingLayout>
           }
         />

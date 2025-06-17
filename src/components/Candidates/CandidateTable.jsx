@@ -28,6 +28,10 @@ import {
 } from "@fortawesome/free-solid-svg-icons"
 import '../Dashboard/UploadDocuments.css';
 import axios from "axios";
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+
 import React, { useState, useEffect } from "react";
 import { Button, Modal, Form, Spinner, Alert, Dropdown,Tabs, Tab, Badge  } from 'react-bootstrap';
 import { io } from "socket.io-client";
@@ -382,16 +386,39 @@ useEffect(() => {
     window.open(url, '_blank'); // Opens the link in a new tab
   };
  
-  const handleResumeLink = async (resumeId) => {
-    try {
-      if (!resumeId) return '#';
-      const response = await axiosInstance.get(`/api/resumes/${resumeId}`);
-      return response.data?.url || '#';
-    } catch (error) {
-      console.error('Error getting resume URL:', error);
-      return '#';
+const handleResumeLink = async (resumeId) => {
+  try {
+    if (!resumeId) {
+      console.error('No resume ID provided');
+      return { success: false, error: 'No resume selected' };
     }
-  };
+
+    const response = await axiosInstance.get(`/api/resumes/${resumeId}`);
+    
+    if (!response.data?.success) {
+      throw new Error(response.data?.error || 'Failed to get resume URL');
+    }
+
+    return {
+      success: true,
+      url: response.data.url,
+      filename: response.data.filename
+    };
+  } catch (error) {
+    console.error('Error getting resume URL:', {
+      error: error.response?.data || error.message,
+      resumeId
+    });
+    
+    return { 
+      success: false,
+      error: error.response?.data?.error || 'Failed to access resume',
+      details: process.env.NODE_ENV === 'development' 
+        ? error.response?.data?.details || error.message 
+        : undefined
+    };
+  }
+};
   const handlejdLink = async (jobDescriptionId) => {
     try {
       if (!jobDescriptionId) return '#';
@@ -722,20 +749,22 @@ const candidatesToDisplay = viewMode === 'recent'
                           >
                       
                               <Dropdown.Item 
-                                as="a" 
-                                href="#" 
-                                onClick={async (e) => {
-                                  e.preventDefault();
-                                  const url = await handleResumeLink(result.resumeId?._id);
-                                  if (url && url !== '#') {
-                                    window.open(url, '_blank');
-                                  }
-                                }}
-                                className="custom-dropdown-item"
-                              >
-                                <FontAwesomeIcon icon={faEye} className="me-2 text-dark" />
-                                View Resume
-                              </Dropdown.Item>
+                            as="a" 
+                            href="#" 
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              const { success, url, error } = await handleResumeLink(result.resumeId?._id);
+                              if (success && url) {
+                                window.open(url, '_blank');
+                              } else {
+                                toast.error(error || 'Failed to open resume');
+                              }
+                            }}
+                            className="custom-dropdown-item"
+                          >
+                            <FontAwesomeIcon icon={faEye} className="me-2 text-dark" />
+                            View Resume
+                          </Dropdown.Item>
                               <Dropdown.Item 
                                 as="a" 
                                 href="#" 

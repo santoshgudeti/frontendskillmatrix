@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { axiosInstance } from '../../axiosUtils';
-
+import { FaEye, FaEyeSlash } from "react-icons/fa"; // Install with: npm install react-icons
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false); // 👈 Loading state
   const navigate = useNavigate();
 
@@ -60,18 +61,35 @@ const Login = () => {
                 required
               />
             </div>
-            <div className="mb-3">
-              <label htmlFor="password" className="form-label text-black">Password</label>
-              <input
-                type="password"
-                className="form-control bg-white bg-opacity-50"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-              />
-            </div>
+          <div className="mb-3 position-relative">
+      <label htmlFor="password" className="form-label text-black">
+        Password
+      </label>
+
+      <input
+        type={showPassword ? "text" : "password"}
+        className="form-control bg-white bg-opacity-50"
+        id="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Enter your password"
+        required
+      />
+
+      <span
+        onClick={() => setShowPassword(!showPassword)}
+        className="position-absolute"
+        style={{
+          right: "15px",
+          top: "38px",
+          cursor: "pointer",
+          zIndex: 10,
+          color: "#6c757d"
+        }}
+      >
+        {showPassword ? <FaEyeSlash /> : <FaEye />}
+      </span>
+    </div>
             <button type="submit" className="btn btn-primary w-100" disabled={loading}>
               {loading ? 'Processing...' : 'Login'}
             </button>
@@ -89,6 +107,11 @@ const Login = () => {
               Register
             </Link>
           </div>
+          <div className="mt-3 text-center">
+  <Link to="/forgot-password" className="text-decoration-none">
+    Forgot password?
+  </Link>
+</div>
         </div>
       </div>
     </div>
