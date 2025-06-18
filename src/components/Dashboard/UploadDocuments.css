@@ -1,4 +1,425 @@
-/*candidate: Dashboard Upload Documents CSS */
+
+/*response display to tell hr to go thourh candidates section to perform test */
+.custom-success-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(24, 24, 24, 0.6);
+  z-index: 999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.custom-success-modal {
+  background: white;
+  padding: 32px;
+  width: 460px;
+  border-radius: 16px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  animation: slideUp 0.4s ease-out;
+}
+
+.modal-heading {
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: #2d2e32;
+  margin-bottom: 12px;
+}
+
+.modal-message {
+  font-size: 1rem;
+  color: #4b4b4b;
+  margin-bottom: 24px;
+}
+
+.modal-button {
+  background-color: #007bff;
+  border: none;
+  color: white;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.modal-button:hover {
+  background-color: #0056b3;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; } 
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/*Dashboard Upload Documents CSS */
+/* JD Selector Styles */
+
+.jd-selector-container {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.jd-selector {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 12px 15px;
+  background-color: #f9f9f9;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.jd-selector:hover {
+  border-color: #2563eb;
+  background-color: #f0f7ff;
+}
+
+.jd-selector.open {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.selector-label {
+  font-size: 14px;
+  color: #333;
+}
+
+.dropdown-icon {
+  font-size: 12px;
+  color: #666;
+  transition: transform 0.2s ease;
+}
+
+.jd-selector.open .dropdown-icon {
+  transform: rotate(180deg);
+}
+
+.jd-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  margin-top: 5px;
+}
+
+.jd-option {
+  padding: 12px 15px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.jd-option:hover {
+  background-color: #f5f5f5;
+}
+
+.jd-option.selected {
+  background-color: #e6f0ff;
+}
+
+.jd-option-title {
+  font-weight: 500;
+  flex-grow: 1;
+}
+
+.jd-option-date {
+  font-size: 12px;
+  color: #666;
+  margin: 0 10px;
+}
+
+.jd-delete-button {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 5px;
+  font-size: 12px;
+}
+
+.jd-delete-button:hover {
+  color: #ff4444;
+}
+
+.jd-option.empty {
+  color: #666;
+  font-style: italic;
+  justify-content: center;
+}
+
+/* Title Edit Styles */
+.title-edit-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.title-edit-input {
+  flex-grow: 1;
+  padding: 5px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-right: 5px;
+}
+
+.title-save-button,
+.title-cancel-button {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+.title-save-button {
+  background-color: #2563eb;
+  color: white;
+}
+
+.title-save-button:hover {
+  background-color: #1d4ed8;
+}
+
+.title-cancel-button {
+  background-color: #e5e7eb;
+  color: #333;
+}
+
+.title-cancel-button:hover {
+  background-color: #d1d5db;
+}
+
+.title-display-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.edit-title-button {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  margin-left: 8px;
+  font-size: 14px;
+}
+
+.edit-title-button:hover {
+  color: #2563eb;
+}
+
+/* Layout Adjustments */
+.jd-management-section {
+  position: relative;
+}
+
+.file-preview .file-info {
+  width: 100%;
+}
+
+
+/* Loading Effects */
+.loading-icon {
+  margin-left: 8px;
+  color: #666;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.loading-jds {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.submitting {
+  position: relative;
+  pointer-events: none;
+}
+
+.submitting::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Confirmation Dialog Styles */
+.confirmation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.confirmation-dialog {
+  background-color: white;
+  border-radius: 8px;
+  padding: 25px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  text-align: center;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.confirmation-icon {
+  margin-bottom: 15px;
+}
+
+.confirmation-icon.delete {
+  color: #ef4444;
+}
+
+.confirmation-icon.update {
+  color: #10b981;
+}
+
+.confirmation-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.confirmation-message {
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.confirmation-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.confirmation-button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.confirmation-button.cancel {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+.confirmation-button.cancel:hover {
+  background-color: #e5e7eb;
+}
+
+.confirmation-button.delete {
+  background-color: #ef4444;
+  color: white;
+  border: 1px solid #dc2626;
+}
+
+.confirmation-button.delete:hover {
+  background-color: #dc2626;
+}
+
+.confirmation-button.update {
+  background-color: #10b981;
+  color: white;
+  border: 1px solid #059669;
+}
+
+.confirmation-button.update:hover {
+  background-color: #059669;
+}
+
+/* Button Loading States */
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Enhanced File Preview Loading */
+.file-preview .file-info {
+  position: relative;
+}
+
+.file-preview.loading::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Submit Button Loading */
+.submit-button {
+  position: relative;
+}
+
+.submit-button .fa-spinner {
+  margin-right: 8px;
+}
+/*candidate table*/
 .candidate-table-header th {
   font-family: 'Poppins', sans-serif; /* Or 'Inter', sans-serif */
   background-color: rgba(88, 74, 244, 0.31);

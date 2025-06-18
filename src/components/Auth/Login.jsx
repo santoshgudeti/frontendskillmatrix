@@ -3,11 +3,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { axiosInstance } from '../../axiosUtils';
 import { FaEye, FaEyeSlash } from "react-icons/fa"; // Install with: npm install react-icons
+import WelcomeModal from '../modals/WelcomeModal';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false); // 👈 Loading state
+    const [showWelcome, setShowWelcome] = useState(false);
+  const [loggedInUserName, setLoggedInUserName] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -19,14 +22,17 @@ const Login = () => {
         { email, password },
         { withCredentials: true }
       );
-
-      toast.success('Login successful!');
-      navigate('/dashboard/upload');
+ setLoggedInUserName(res.data.user?.fullName || '');
+      setShowWelcome(true); // Show welcome modal
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false); // 👈 Stop loading
     }
+  };
+ const handleWelcomeClose = () => {
+    setShowWelcome(false);
+    navigate('/dashboard/upload'); // Move here after welcome
   };
 
   return (
@@ -42,6 +48,8 @@ const Login = () => {
           </div>
         </div>
       )}
+
+       <WelcomeModal show={showWelcome} onClose={handleWelcomeClose} userName={loggedInUserName} />
 
       <div className="auth-form bg-white">
         <div className="text-center mb-4">

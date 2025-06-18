@@ -27,6 +27,8 @@ import {
   
 } from "@fortawesome/free-solid-svg-icons"
 import React, { useState, useEffect } from "react";
+import { useLocation } from 'react-router-dom';
+
 import axios from "axios";
 import { Button, Modal, Form,Dropdown } from "react-bootstrap";
 import { io } from "socket.io-client";
@@ -37,17 +39,27 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./UploadDocuments.css";
 import { axiosInstance } from "../../axiosUtils";
+  import TopNotificationModal from './TopNotificationModal';
 
 function ResponseTable({ data, duplicateCount  }) {
 
   console.log("Received data:", data);
   console.log("Duplicate count:", duplicateCount);  
+
+
+const [showTopModal, setShowTopModal] = useState(false);
+const [modalMessage, setModalMessage] = useState('');
+
     const [expandedRow, setExpandedRow] = useState(null)
    const [members, setMembers] = useState([]); // Store fetched members
     const [filteredMembers, setFilteredMembers] = useState([]); // Store filtered results
     const [expandedLists, setExpandedLists] = useState({});
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [allSelected, setAllSelected] = useState({});
+    const location = useLocation();
+const fromUpload = location.state?.fromUpload || false; 
+    const [showSuccessModal, setShowSuccessModal] = useState(true); // modal shown initially
+
     const [selectedFilters, setSelectedFilters] = useState({
       skills: [],
       designation: [],
@@ -64,19 +76,18 @@ function ResponseTable({ data, duplicateCount  }) {
       jobType: faBriefcase,
     }
 
-  useEffect(() => {
-    if (duplicateCount !==undefined) {
-      toast.info(`We have found "${duplicateCount}" Duplicate profiles check the history`, {
-        position: "top-right",
-      });
-      
-    }
-  }, [duplicateCount]);
-
+useEffect(() => {
+  if (duplicateCount !== undefined && duplicateCount > 0) {
+    setModalMessage(`We detected ${duplicateCount} duplicate profile${duplicateCount > 1 ? 's' : ''}. Check the Candidate History section.`);
+    setShowTopModal(true);
+  }
+}, [duplicateCount]);
   if (!data || data.length === 0) {
     console.log("No data available to display.");
 
   }
+
+
 
   useEffect(() => {
     if (data && Array.isArray(data)) {
@@ -349,7 +360,28 @@ function ResponseTable({ data, duplicateCount  }) {
       </div>
     </div>
         <div className="table-responsive">
-        <ToastContainer/>
+    {showTopModal && (
+  <TopNotificationModal
+    message={modalMessage}
+    onClose={() => setShowTopModal(false)}
+  />
+)}
+
+        {showSuccessModal && (
+  <div className="custom-success-modal-backdrop">
+    <div className="custom-success-modal">
+      <h2 className="modal-heading">Upload Successful 🎉</h2>
+      <p className="modal-message">
+        Your candidates were processed successfully.  
+        <strong> Go to the "Candidates" section</strong> to assign assessments or take further action.
+      </p>
+      <button className="modal-button" onClick={() => setShowSuccessModal(false)}>
+        Got it
+      </button>
+    </div>
+  </div>
+)}
+
           <table className="table table-hover align-middle mb-0">
                  <thead className="table candidate-table-header">
               <tr>

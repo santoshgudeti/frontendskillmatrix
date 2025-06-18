@@ -3,12 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Card, Button, Modal, Container, Row, Col, Badge, Alert } from 'react-bootstrap';
+import TopNotificationModal from '../Dashboard/TopNotificationModal';
 
 import { axiosInstance } from '../../axiosUtils';
 
 const UserProfile = () => {
   const [user, setUser] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
+const [notificationMessage, setNotificationMessage] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,15 +26,20 @@ const UserProfile = () => {
     fetchUser();
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await axiosInstance.post('/logout', {}, { withCredentials: true });
+const handleLogout = async () => {
+  try {
+    await axiosInstance.post('/logout', {}, { withCredentials: true });
+    setNotificationMessage("Logout successful. See you again!");
+    setShowNotification(true);
+    setTimeout(() => {
       navigate('/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-      toast.error('Logout failed. Please try again.');
-    }
-  };
+    }, 1500);
+  } catch (error) {
+    console.error('Logout failed:', error);
+    toast.error('Logout failed. Please try again.');
+  }
+};
+
 
  // Update the subscription section
  
@@ -58,6 +66,11 @@ const UserProfile = () => {
   };
 
 
+const handleSave = () => {
+  // save logic...
+  setNotificationMessage("Profile updated successfully!");
+  setShowNotification(true);
+};
 
   const handleCloseModal = () => setShowModal(false);
   const handleShowModal = () => setShowModal(true);
@@ -66,6 +79,13 @@ const UserProfile = () => {
 
   return (
     <Container className="py-5" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
+      {showNotification && (
+  <TopNotificationModal
+    message={notificationMessage}
+    onClose={() => setShowNotification(false)}
+  />
+)}
+
       <Row className="justify-content-center">
         <Col md={8} lg={6}>
           <Card className="border-0 shadow-lg" style={{ borderRadius: '15px', overflow: 'hidden' }}>
