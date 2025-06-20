@@ -160,21 +160,26 @@ const handleAutoSubmit = async () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
   }, [proctored, violations]);
-
-  const handleAnswer = (selectedAnswer) => {
-    if (questions.length === 0) return;
-    
-    const newAnswers = [...userAnswers];
-    newAnswers[currentQuestion] = selectedAnswer;
-    setUserAnswers(newAnswers);
+// Update handleAnswer to store user answer
+const handleAnswer = (selectedAnswer) => {
+  if (questions.length === 0) return;
   
-    // Recalculate score based on all answers
-    const newScore = questions.reduce((total, question, index) => {
-      return total + (newAnswers[index] === question.correctAnswer ? 1 : 0);
-    }, 0);
-    
-    setScore(newScore);
-  };
+  const newAnswers = [...userAnswers];
+  newAnswers[currentQuestion] = selectedAnswer;
+  setUserAnswers(newAnswers);
+
+  // Update question in state with user answer
+  const updatedQuestions = [...questions];
+  updatedQuestions[currentQuestion].userAnswer = selectedAnswer;
+  setQuestions(updatedQuestions);
+
+  // Recalculate score
+  const newScore = questions.reduce((total, question, index) => {
+    return total + (newAnswers[index] === question.correctAnswer ? 1 : 0);
+  }, 0);
+  
+  setScore(newScore);
+};
 
   const handleNext = () => {
     if (currentQuestion < questions.length - 1) {
@@ -190,31 +195,36 @@ const handleAutoSubmit = async () => {
     }
   };
 
-  const handleSubmit = async () => {
-    if (questions.length === 0) return;
-    
-    // Calculate final score (percentage)
-    const finalScore = Math.round((score / questions.length) * 100);
-    
-    if (proctored) {
-      // If part of proctored assessment, use the onComplete callback
-      if (onComplete) {
-        await onComplete(finalScore);
-      }
-    } else {
-      // Standalone quiz mode - submit directly to backend
-      try {
-        await axiosInstance.post('/api/submit-score', {
-          token,
-          score: finalScore,
-        });
-      } catch (error) {
-        console.error('Error submitting score:', error);
-      }
+const handleSubmit = async () => {
+  if (questions.length === 0) return;
+  
+  // Calculate final score (percentage)
+  const finalScore = Math.round((score / questions.length) * 100);
+  
+  if (proctored) {
+    // If part of proctored assessment, use the onComplete callback
+    if (onComplete) {
+      await onComplete(finalScore, questions); // Pass questions with answers
     }
-    
-    setQuizCompleted(true);
-  };
+  } else {
+    // Standalone quiz mode - submit directly to backend
+    try {
+      await axiosInstance.post('/api/submit-score', {
+        token,
+        score: finalScore,
+        answers: questions.map(q => ({
+          id: q.id,
+          question: q.question,
+          userAnswer: q.userAnswer
+        }))
+      });
+    } catch (error) {
+      console.error('Error submitting score:', error);
+    }
+  }
+  
+  setQuizCompleted(true);
+};
 
   const restartQuiz = () => {
     setCurrentQuestion(0);
