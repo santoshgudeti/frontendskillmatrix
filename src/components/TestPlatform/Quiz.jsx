@@ -161,23 +161,33 @@ const handleAutoSubmit = async () => {
     };
   }, [proctored, violations]);
 // Update handleAnswer to store user answer
-const handleAnswer = (selectedAnswer) => {
+const handleAnswer = async (selectedAnswer) => {
   if (questions.length === 0) return;
   
+  // Update local state immediately for UI responsiveness
   const newAnswers = [...userAnswers];
   newAnswers[currentQuestion] = selectedAnswer;
   setUserAnswers(newAnswers);
 
-  // Update question in state with user answer
   const updatedQuestions = [...questions];
   updatedQuestions[currentQuestion].userAnswer = selectedAnswer;
   setQuestions(updatedQuestions);
+
+  // Persist to backend
+  try {
+    await axiosInstance.patch(`/api/update-answer/${token}`, {
+      questionId: questions[currentQuestion].id,
+      userAnswer: selectedAnswer
+    });
+  } catch (error) {
+    console.error('Failed to save answer:', error);
+    // Consider adding retry logic here
+  }
 
   // Recalculate score
   const newScore = questions.reduce((total, question, index) => {
     return total + (newAnswers[index] === question.correctAnswer ? 1 : 0);
   }, 0);
-  
   setScore(newScore);
 };
 
