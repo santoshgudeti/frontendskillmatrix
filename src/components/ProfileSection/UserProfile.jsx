@@ -96,20 +96,21 @@ const handleSave = () => {
               position: 'relative'
             }}>
               {/* Logout button in top right corner */}
-              <Button 
-                variant="link" 
-                onClick={handleLogout}
-                style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  color: 'white',
-                  textDecoration: 'none',
-                  zIndex: 1
-                }}
-              >
-                <i className="fas fa-sign-out-alt"></i> Logout
-              </Button>
+            <Button 
+
+  onClick={handleLogout}
+  style={{
+    position: 'absolute',
+    top: '10px',
+        backgroundColor: '#dc3545', // Bootstrap red
+    right: '10px',
+    color: 'white', // Optional override
+    zIndex: 1
+  }}
+>
+  <i className="fas fa-sign-out-alt me-1"></i> Logout
+</Button>
+
               
               {/* Profile Picture Placeholder */}
               <div style={{
