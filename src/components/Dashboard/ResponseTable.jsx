@@ -23,11 +23,12 @@ import {
   faUserTie,
   faBuilding,
   faRotateLeft,
-  faCalendarAlt
+  faCalendarAlt,
+  faIdBadge ,
   
 } from "@fortawesome/free-solid-svg-icons"
 import React, { useState, useEffect } from "react";
-import { useLocation } from 'react-router-dom';
+import { useLocation,useNavigate  } from 'react-router-dom';
 
 import axios from "axios";
 import { Button, Modal, Form,Dropdown } from "react-bootstrap";
@@ -60,22 +61,26 @@ const [modalMessage, setModalMessage] = useState('');
 const fromUpload = location.state?.fromUpload || false; 
     const [showSuccessModal, setShowSuccessModal] = useState(true); // modal shown initially
 
-    const [selectedFilters, setSelectedFilters] = useState({
-      skills: [],
-      designation: [],
-      degree: [],
-      company_names: [],
-      jobType: [],
-    });
-    const [showModal, setShowModal] = useState({});
-   const filterIcons = { 
-      skills: faTools,
-      designation: faUserTie,
-      degree: faGraduationCap,
-      company_names: faBuilding,
-      jobType: faBriefcase,
-    }
+   const [selectedFilters, setSelectedFilters] = useState({
+  skills: [],
+  designation: [],
+  degree: [],
+  company_names: [],
+  jobType: [],
+  job_title: [], // ✅ NEW
+});
 
+    const [showModal, setShowModal] = useState({});
+   const filterIcons = {
+  skills: faTools,
+  designation: faUserTie,
+  degree: faGraduationCap,
+  company_names: faBuilding,
+  jobType: faBriefcase,
+  job_title: faIdBadge, // ✅ NEW
+};
+
+  const navigate = useNavigate(); // ✅ Initialize it here
 useEffect(() => {
   if (duplicateCount !== undefined && duplicateCount > 0) {
     setModalMessage(`We detected ${duplicateCount} duplicate profile${duplicateCount > 1 ? 's' : ''}. Check the Candidate History section.`);
@@ -178,22 +183,36 @@ useEffect(() => {
         )
       );
     }
+    if (selectedFilters.job_title.length) {
+  filtered = filtered.filter((member) =>
+    selectedFilters.job_title.some((jobTitle) =>
+      member.matchingResult?.["Job Title"]?.toLowerCase().includes(jobTitle.toLowerCase())
+    )
+  );
+}
+
  
     
     setFilteredMembers(filtered);
   };
-  const extractUniqueValues = (key) => {
-    if (key === "jobType") {
-      return ["Fresher", "Experienced"];
-    }
+ const extractUniqueValues = (key) => {
+  if (key === "jobType") {
+    return ["Fresher", "Experienced"];
+  }
+  if (key === "job_title") {
     return [
       ...new Set(
-        members.flatMap((member) =>
-          member.matchingResult?.[key]?.flat() || []
-        )
+        members.map((member) => member.matchingResult?.["Job Title"]).filter(Boolean)
       ),
     ];
-  };
+  }
+  return [
+    ...new Set(
+      members.flatMap((member) => member.matchingResult?.[key]?.flat() || [])
+    ),
+  ];
+};
+
 
   const resetFilters = (filterCategory) => {
     handleFilterChange(filterCategory, []);
@@ -207,6 +226,7 @@ useEffect(() => {
       degree: [],
       company_names: [],
       jobType: [],
+        job_title: [], // ✅ RESET too
     });
     setAllSelected({});
     setFilteredMembers(members);
@@ -367,20 +387,40 @@ useEffect(() => {
   />
 )}
 
-        {showSuccessModal && (
+       {showSuccessModal && (
   <div className="custom-success-modal-backdrop">
     <div className="custom-success-modal">
       <h2 className="modal-heading">Upload Successful 🎉</h2>
+
       <p className="modal-message">
         Your candidates were processed successfully.  
         <strong> Go to the "Candidates" section</strong> to assign assessments or take further action.
       </p>
+
+      <p className="modal-message text-muted" style={{ fontSize: "14px" }}>
+        🔍 You can also explore <strong>Recommended Profiles</strong> — AI-curated candidates that best match your job description.
+        <br />
+        <button
+          className="btn btn-link px-0 text-primary"
+          style={{ fontSize: "14px", textDecoration: "underline" }}
+          onClick={() => {
+            setShowSuccessModal(false); // close modal
+     navigate("/dashboard/candidates", { state: { view: 'recommended' } });
+
+
+          }}
+        >
+          Go to Recommended Profiles →
+        </button>
+      </p>
+
       <button className="modal-button" onClick={() => setShowSuccessModal(false)}>
         Got it
       </button>
     </div>
   </div>
 )}
+
 
           <table className="table table-hover align-middle mb-0">
                  <thead className="table candidate-table-header">
@@ -427,6 +467,10 @@ useEffect(() => {
                         </div>
                         <span className="ms-2 fw-bold">{resumeData["Matching Percentage"] || "0"}%</span>
                       </div>
+                      {result.candidateConsent?.allowedToShare && (
+  <span className="badge bg-success">Shared</span>
+)}
+
                     </td>
                     <td style={{ padding: "16px 24px" }}>
                             <div className="d-flex gap-2">

@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useNavigate, Routes, Route, Link } from 'react-router-dom';
+import { useNavigate, Routes, Route, Link,useLocation  } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { confirmAlert } from 'react-confirm-alert';
 import 'react-confirm-alert/src/react-confirm-alert.css';
 import { 
   FaEdit, FaSave, FaTrash, FaCheck, FaTimes, 
   FaUsers, FaUserClock, FaUserCheck, FaUserShield,
-  FaChartPie, FaList, FaUserCog, FaSignOutAlt
+  FaChartPie, FaList, FaUserCog, FaSignOutAlt,FaUserTie
 } from 'react-icons/fa';
 import { 
   Card, Table, Button, Form, Container, Row, Col, 
@@ -15,6 +15,7 @@ import {
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { axiosInstance } from '../../axiosUtils';
+import HRManagement from './HRManagement';
 
 import "./Admin.css"
 
@@ -26,6 +27,13 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const navigate = useNavigate();
+
+    // Add this effect to sync activeTab with current route
+  const location = useLocation();
+  useEffect(() => {
+    const path = location.pathname.split('/').pop();
+    setActiveTab(path || 'dashboard');
+  }, [location]);
 
   // Fetch dashboard data
   useEffect(() => {
@@ -314,20 +322,34 @@ const AdminDashboard = () => {
         <Navbar bg="light" expand="lg" className="mb-4">
           <Container fluid>
             <Navbar.Brand>Admin Dashboard</Navbar.Brand>
+
+<Nav.Item>
+  <Nav.Link 
+    as={Link}
+    to="hr-management"  // Relative path
+    active={activeTab === 'hr-management'}
+    onClick={() => setActiveTab('hr-management')}
+  >
+    <FaUserTie /> HR Management
+  </Nav.Link>
+</Nav.Item>
           </Container>
         </Navbar>
 
         <Container fluid>
-          <Routes>
-            <Route path="/" element={<DashboardHome />} />
-            <Route path="/dashboard" element={<DashboardHome />} />
-            <Route path="/users" element={<UserManagement />} />
+         <Routes>
+  <Route index element={<DashboardHome />} />
+  <Route path="dashboard" element={<DashboardHome />} />
+  <Route path="users" element={<UserManagement />} />
+  <Route path="hr-management" element={<HRManagement />} />
+
             <Route path="/pending" element={
               <Card>
                 <Card.Header className="bg-warning text-white">
                   <FaUserClock /> Pending Approvals
                 </Card.Header>
                 <Card.Body>
+
                   {pendingUsers.length === 0 ? (
                     <Alert variant="info">No users pending approval</Alert>
                   ) : (

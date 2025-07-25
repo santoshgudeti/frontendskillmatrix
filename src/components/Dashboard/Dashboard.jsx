@@ -9,6 +9,8 @@ import AdminDashboard from "../ProfileSection/AdminDashboard";
 import AdminUserDetail from "../ProfileSection/AdminUserDetail"; // Add this import
 import UserProfile from "../ProfileSection/UserProfile";
 
+
+
 function Dashboard({ onLogout }) {
   const [resumeData, setResumeData] = useState([]); // State to store resume data
   const [responseData, setResponseData] = useState(null); // State to store API response data
@@ -34,7 +36,10 @@ function Dashboard({ onLogout }) {
             />
             
           )}/>
-             <Route path="admin" element={<AdminDashboard />} />
+     
+
+
+             <Route path="admin/*" element={<AdminDashboard />} />
             <Route path="admin/users/:id" element={<AdminUserDetail />} /> {/* Add this route */}
 
              <Route path="user" element={<UserProfile />} />

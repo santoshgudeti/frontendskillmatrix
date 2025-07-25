@@ -72,18 +72,7 @@ const Navbar = () => {
                 Pricing
               </a>
             </li>
-            <li className="nav-item">
-              <a
-                className="nav-link"
-                href="#about"
-                onClick={(e) => {
-                  e.preventDefault();
-                  scrollToSection('about');
-                }}
-              >
-                About
-              </a>
-            </li>
+           
           </ul>
         </div>
 
@@ -102,7 +91,7 @@ const Navbar = () => {
             Sign up
           </Link>
         </div>
-
+       
       </div>
     </nav>
   );

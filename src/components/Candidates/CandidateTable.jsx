@@ -1,29 +1,23 @@
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { useLocation } from 'react-router-dom';
 import {
   faMagnifyingGlass, faRotateRight,
   faComment,
   faFileAlt,
   faVideo,
+  faCode,
   faChevronDown,
   faChevronUp,
   faStar,
   faDownload,
   faEye,
-  faFilter,
-  faTimes,
-  faSearch,
-  faMapMarkerAlt,
-  faClock,
   faGraduationCap,
-  faLanguage,
   faBriefcase,
-  faMoneyBillWave,
-  faTools,
   faUserTie,
   faBuilding,
-  faRotateLeft,
-  faCalendarAlt
+  faIdBadge,
+  faCalendarAlt,
   
 } from "@fortawesome/free-solid-svg-icons"
 import '../Dashboard/UploadDocuments.css';
@@ -65,21 +59,30 @@ function CandidateTable() {
     degree: [],
     company_names: [],
     jobType: [],
+    job_title: [], // ✅ Added
+
   });
-  
-  const filterIcons = { 
-    skills: faTools,
-    designation: faUserTie,
-    degree: faGraduationCap,
-    company_names: faBuilding,
-    jobType: faBriefcase,
-  }
+const filterIcons = {
+  jobType: faUserTie,
+  skills: faCode,
+  designation: faBriefcase,
+  degree: faGraduationCap,
+  company_names: faBuilding,
+  job_title: faIdBadge, // ✅ NEW icon for job title
+};
+
   const [showModal, setShowModal] = useState({});
   
   // Add these new state variables
-  const [viewMode, setViewMode] = useState('all'); // 'all', 'recent', or 'history'
+const location = useLocation();
+const initialViewMode = location.state?.view || 'all'; // default to 'all'
+
+const [viewMode, setViewMode] = useState(initialViewMode);
   const [recentCandidates, setRecentCandidates] = useState([]);
   const [historicalCandidates, setHistoricalCandidates] = useState([]);
+
+  const [recommendedCandidates, setRecommendedCandidates] = useState([]);
+
 
   useEffect(() => {
     const socket = io("");
@@ -277,6 +280,46 @@ useEffect(() => {
         fetchCandidates();
       }, []);
 
+const fetchRecommendationsConsentOnly = async () => {
+  try {
+    const res = await axiosInstance.get("/api/recommendations/candidates");
+    const data = res.data || [];
+
+    // Don't show immediately
+    setRecommendedCandidates(data);
+    setMembers(data); // Set for filtering
+    setFilteredMembers([]); // Start with empty display
+  } catch (error) {
+    console.error('Failed to fetch recommended candidates:', error.message);
+  }
+};
+
+
+useEffect(() => {
+  if (viewMode === 'recommended') {
+    fetchRecommendationsConsentOnly(); // 👈 This line is missing!
+  } else {
+    // Reset filters and show all candidates relevant to that view
+    setFilteredMembers(
+      viewMode === 'recent'
+        ? recentCandidates
+        : viewMode === 'history'
+        ? historicalCandidates
+        : candidates // for "all"
+    );
+    setSelectedFilters({
+      skills: [],
+      designation: [],
+      degree: [],
+      company_names: [],
+      jobType: [],
+      job_title: [],
+    });
+    setAllSelected({});
+  }
+}, [viewMode, candidates, recentCandidates, historicalCandidates]);
+
+
   const toggleModal = (filter) => {
     setShowModal((prev) => ({ ...prev, [filter]: !prev[filter] }));
   };
@@ -331,7 +374,16 @@ useEffect(() => {
         )
       );
     }
-   
+   if (selectedFilters.job_title.length) {
+  filtered = filtered.filter((member) =>
+    selectedFilters.job_title.some((title) =>
+      (member.matchingResult[0]?.["Resume Data"]?.["Job Title"] || "")
+        .toLowerCase()
+        .includes(title.toLowerCase())
+    )
+  );
+}
+
  
     if (selectedFilters.designation.length) {
       filtered = filtered.filter((member) =>
@@ -352,18 +404,29 @@ useEffect(() => {
     const bMatch = b.matchingResult?.[0]?.["Resume Data"]?.["Matching Percentage"] || 0;
     return bMatch - aMatch; // Descending order
   });
-  const extractUniqueValues = (key) => {
-    if (key === "jobType") {
-      return ["Fresher", "Experienced"];
-    }
+ const extractUniqueValues = (key) => {
+  if (key === "jobType") {
+    return ["Fresher", "Experienced"];
+  }
+  if (key === "job_title") {
     return [
       ...new Set(
-        members.flatMap((member) =>
-          member.matchingResult[0]?.["Resume Data"]?.[key]?.flat() || []
-        )
+        members.map(
+          (m) =>
+            m.matchingResult[0]?.["Resume Data"]?.["Job Title"] || ""
+        ).filter(Boolean)
       ),
     ];
-  };
+  }
+  return [
+    ...new Set(
+      members.flatMap((member) =>
+        member.matchingResult[0]?.["Resume Data"]?.[key]?.flat() || []
+      )
+    ),
+  ];
+};
+
 
   const resetFilters = (filterCategory) => {
     handleFilterChange(filterCategory, []);
@@ -377,9 +440,15 @@ useEffect(() => {
       degree: [],
       company_names: [],
       jobType: [],
+        job_title: [], // ✅ Added
     });
     setAllSelected({});
-    setFilteredMembers(members);
+   if (viewMode === 'recommended') {
+  setFilteredMembers([]);  // ✅ Hide recommended until filters are applied again
+} else {
+  setFilteredMembers(members);
+}
+
   };
 
   const handleOpenLink = (url) => {
@@ -491,7 +560,7 @@ const renderViewToggle = () => (
       className="me-2 text-black"
         style={{ backgroundColor: 'rgb(63 51 196 / 31%)' }}
     >
-      All Candidates
+     All Applicants 
     </Button>
     <Button 
       variant={viewMode === 'recent' ? 'primary' : 'outline-primary'}
@@ -499,7 +568,7 @@ const renderViewToggle = () => (
       className="me-2 text-black"
        style={{ backgroundColor: 'rgb(63 51 196 / 31%)' }}
     >
-      Recent Uploads
+       Latest Profiles
       {recentCandidates.length > 0 && (
         <Badge bg="danger" className="ms-2" >
           
@@ -507,15 +576,35 @@ const renderViewToggle = () => (
         </Badge>
       )}
     </Button>
+    <Button 
+  variant={viewMode === 'recommended' ? 'primary' : 'outline-primary'}
+  onClick={() => {
+    setViewMode('recommended');
+    fetchRecommendationsConsentOnly(); // ✅ Load shared candidates only when clicked
+  }}
+  className="text-black"
+  style={{ backgroundColor: 'rgb(63 51 196 / 31%)' }}
+>
+   Recommended Profiles
+  {recommendedCandidates.length > 0 && (
+    <Badge bg="info" className="ms-2">{recommendedCandidates.length}</Badge>
+  )}
+</Button>
+
+
    
   </div>
 );
 
-const candidatesToDisplay = viewMode === 'recent' 
-  ? recentCandidates 
-  : viewMode === 'history'
-    ? historicalCandidates
-    : filteredMembers;
+const candidatesToDisplay = viewMode === 'recommended'
+  ? filteredMembers  // ✅ Only show filtered results after "Apply"
+  : viewMode === 'recent'
+    ? recentCandidates
+    : viewMode === 'history'
+      ? historicalCandidates
+      : filteredMembers;
+
+
 
     // Sort the candidates based on the current view
   const sortedCandidatesToDisplay = [...candidatesToDisplay].sort((a, b) => {
@@ -583,6 +672,23 @@ const candidatesToDisplay = viewMode === 'recent'
               </Modal.Title>
             </Modal.Header>
             <Modal.Body>
+               <Modal.Footer className="justify-content-between">
+              <Button variant="secondary" 
+              onClick={() => {
+                  handleFilterChange(filter, []);
+                  if (viewMode === 'recommended') {
+                    setFilteredMembers([]);
+                  } else {
+                    setFilteredMembers(members);
+                  }
+                }}
+                >
+                Reset
+              </Button>
+              <Button variant="primary" onClick={applyFilters}>
+                Apply
+              </Button>
+            </Modal.Footer>
               <div className="filter-options">
                 <Form>
                   <Form.Check
@@ -613,14 +719,7 @@ const candidatesToDisplay = viewMode === 'recent'
                 </Form>
               </div>
             </Modal.Body>
-            <Modal.Footer className="justify-content-between">
-              <Button variant="secondary" onClick={() => handleFilterChange(filter, [])}>
-                Reset
-              </Button>
-              <Button variant="primary" onClick={applyFilters}>
-                Apply
-              </Button>
-            </Modal.Footer>
+           
             </div>
           </Modal>
         ))}
@@ -728,6 +827,10 @@ const candidatesToDisplay = viewMode === 'recent'
                       </div>
                       <span className="ms-2 fw-bold">{resumeData["Matching Percentage"] || "0"}%</span>
                     </div>
+                    {result.candidateConsent?.allowedToShare && (
+  <span className="badge bg-success">Shared</span>
+)}
+
                   </td>
                   <td>
                     <div className="d-flex gap-2">

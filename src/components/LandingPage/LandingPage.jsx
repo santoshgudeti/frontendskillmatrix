@@ -1,6 +1,11 @@
-import { Link,BrowserRouter  } from 'react-router-dom'
-import { FiSearch, FiUpload, FiCheckCircle, FiUsers, FiBarChart2, FiClock, FiVideo, FiMessageSquare, FiFileText, FiUserCheck, FiAward } from 'react-icons/fi'
+import { Link } from 'react-router-dom';
+import {
+  FiBriefcase, FiUsers, FiBarChart2, FiClock, FiVideo, FiMessageSquare,
+  FiFileText, FiUserCheck, FiAward, FiSearch, FiUpload, FiCheckCircle
+} from 'react-icons/fi';
+
 import './LandingPage.css';
+
 const LandingPage = () => {
   return (
     <>
@@ -8,27 +13,36 @@ const LandingPage = () => {
       <section className="hero-section">
         <div className="container">
           <div className="row align-items-center">
+            {/* Left Side Text */}
             <div className="col-lg-6">
               <h1 className="display-4 fw-bold mb-4">
                 Find the <span className="text-primary">perfect match</span> for every role
               </h1>
-              <p className="lead mb-5">
+
+              <p className="lead mb-4">
                 SkillMatrix ATS streamlines your recruitment process with AI-powered
                 candidate matching, seamless resume parsing, and comprehensive analytics.
               </p>
-              <div className="d-flex flex-wrap gap-3">
+
+              <div className="d-flex flex-wrap gap-3 mb-5">
                 <Link to="/Register" className="btn btn-primary btn-lg px-5 py-3">
                   Request for Free Trial
                 </Link>
-              <a href="#features" className="btn btn-light btn-lg px-5 py-3 fw-bold">
+                <a href="#features" className="btn btn-light btn-lg px-5 py-3 fw-bold">
                   Learn More
                 </a>
-
-
               </div>
             </div>
-            <div className="col-lg-6 d-none d-lg-block">
-             
+
+            {/* Right Side — Post Job Card floating */}
+            <div className="col-lg-6 d-flex justify-content-center align-items-center">
+              <div className="job-ad-card text-center p-5 bg-warning rounded animated-float shadow-lg">
+                <h4 className="fw-bold mb-3 text-dark">🚀 Ready to Hire?</h4>
+                <p className="mb-4 text-dark">Post a job and We will promote them!</p>
+                <Link to="/jobportal" className="btn btn-dark btn-lg fw-bold">
+                  Post a Job – Company Login Only
+                </Link>
+              </div>
             </div>
           </div>
         </div>

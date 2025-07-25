@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FaUserCircle } from "react-icons/fa";
 import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
 import {
   faSearch,
   faBell,
@@ -69,7 +70,7 @@ function Header({ onResponseSubmit }) {
             boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
           }}
           >
-              All candidates
+             Talent Workspace
             </Link>
             <Link
               to="/dashboard/response"
@@ -80,7 +81,7 @@ function Header({ onResponseSubmit }) {
               boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
             }}
                     >
-              Response
+             Evaluation Results
             </Link>
             <Link
               to="/dashboard/upload"
@@ -91,9 +92,12 @@ function Header({ onResponseSubmit }) {
             boxShadow: "1px 1px 3px rgb(0, 0, 0)",
           }}
             >
-              Upload Documents
+              AI Matching 
             </Link>
+
+
           </div>
+          
           
           {/* Profile Section - Pushed to right */}
           <div className="d-flex justify-content-end">
