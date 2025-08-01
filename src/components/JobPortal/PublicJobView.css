@@ -140,9 +140,9 @@
   color: #3498db;
 }
 
-.section-content {
-  line-height: 1.7;
-  color: #444;
+.section-content p {
+  white-space: pre-line;
+  line-height: 1.6;
 }
 
 .section-content p {

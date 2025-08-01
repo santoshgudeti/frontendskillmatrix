@@ -27,17 +27,25 @@ const PublicJobView = () => {
     fetchJob();
   }, [publicId]);
 
-  const handleViewJD = async () => {
-    try {
-      const res = await axiosInstance.get(`/public/view-jd/${job._id}`);
+const handleViewJD = () => {
+  const newTab = window.open('', '_blank'); // Open a blank tab immediately (Safari requires this)
+
+  axiosInstance.get(`/public/view-jd/${job._id}`)
+    .then((res) => {
       if (res.data?.url) {
-        window.open(res.data.url, '_blank');
+        newTab.location.href = res.data.url; // Set the PDF file URL
+      } else {
+        newTab.close();
+        toast.error('No job description file found.');
       }
-    } catch (err) {
-      toast.error('Failed to open job description');
+    })
+    .catch((err) => {
+      newTab.close();
+      toast.error('Failed to open job description.');
       console.error(err);
-    }
-  };
+    });
+};
+
 
   if (loading) return (
     <div className="loading-container">

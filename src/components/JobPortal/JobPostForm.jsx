@@ -32,7 +32,7 @@ const JobPostForm = () => {
     "AI Engineer", "Machine Learning Engineer", "Data Scientist",
     "DevOps Engineer", "Full Stack Developer", "Backend Developer",
     "Software Engineer", "Product Manager", "Business Analyst",
-    "UiPath Developer", "Data Analyst", "Python Developer"
+    "UiPath Developer", "Data Analyst", "Python Developer","Data Engineer"
   ];
 
   const handleChange = e => {
