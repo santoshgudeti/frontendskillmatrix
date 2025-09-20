@@ -1,0 +1,393 @@
+/* Enhanced styling for CandidateTable recordings dropdown */
+.recording-dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.recording-dropdown-container:hover .recording-dropdown-menu {
+  display: block;
+}
+
+.recording-dropdown-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 1000;
+  min-width: 280px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.recording-dropdown-header {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: white;
+  padding: 1rem;
+}
+
+.recording-dropdown-header h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.recording-dropdown-header p {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.recording-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+.recording-item:hover {
+  background-color: #f8fafc;
+}
+
+.recording-item:last-child {
+  border-bottom: none;
+}
+
+.recording-icon-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.recording-icon {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+}
+
+.recording-info {
+  flex: 1;
+}
+
+.recording-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 0.125rem;
+}
+
+.recording-subtitle {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.recording-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.recording-btn {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.recording-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.recording-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.recording-btn-view {
+  background-color: #dbeafe;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+.recording-btn-view:hover:not(:disabled) {
+  background-color: #bfdbfe;
+}
+
+.recording-btn-download {
+  background-color: #dcfce7;
+  border-color: #bbf7d0;
+  color: #16a34a;
+}
+
+.recording-btn-download:hover:not(:disabled) {
+  background-color: #bbf7d0;
+}
+
+.no-recordings {
+  padding: 1.5rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+.no-recordings-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .recording-dropdown-menu {
+    min-width: 260px;
+    right: auto;
+    left: 0;
+  }
+  
+  .recording-item {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .recording-title {
+    font-size: 0.8rem;
+  }
+  
+  .recording-subtitle {
+    font-size: 0.65rem;
+  }
+  
+  .recording-btn {
+    padding: 0.4rem;
+  }
+}
+
+/* New styles for animated recordings section */
+.recording-section {
+  overflow: hidden;
+}
+
+.recording-section-header {
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: white;
+  padding: 0.75rem;
+}
+
+.recording-section-header h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.recording-section-header p {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.recording-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+.recording-item-row:hover {
+  background-color: #f8fafc;
+}
+
+.recording-item-row:last-child {
+  border-bottom: none;
+}
+
+.recording-item-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.recording-item-icon {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+}
+
+.recording-item-details {
+  min-width: 0;
+}
+
+.recording-item-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 0.125rem;
+}
+
+.recording-item-subtitle {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.recording-item-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.recording-action-btn {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.recording-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.recording-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.recording-action-btn-view {
+  background-color: #dbeafe;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+.recording-action-btn-view:hover:not(:disabled) {
+  background-color: #bfdbfe;
+}
+
+.recording-action-btn-download {
+  background-color: #dcfce7;
+  border-color: #bbf7d0;
+  color: #16a34a;
+}
+
+.recording-action-btn-download:hover:not(:disabled) {
+  background-color: #bbf7d0;
+}
+
+.no-recordings-message {
+  padding: 1.5rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+.no-recordings-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.5;
+}
+
+.voice-answers-section {
+  margin-top: 0.5rem;
+}
+
+.voice-answers-header {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  padding: 0.75rem;
+}
+
+.voice-answers-header h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.voice-answers-header p {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.voice-answer-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+.voice-answer-item:hover {
+  background-color: #f8fafc;
+}
+
+.voice-answer-item:last-child {
+  border-bottom: none;
+}
+
+.voice-answer-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.voice-answer-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 0.125rem;
+}
+
+.voice-answer-subtitle {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.voice-answer-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+/* Responsive adjustments for new styles */
+@media (max-width: 768px) {
+  .recording-dropdown-menu {
+    min-width: 260px;
+    right: auto;
+    left: 0;
+  }
+  
+  .recording-item-row {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .recording-item-title {
+    font-size: 0.8rem;
+  }
+  
+  .recording-item-subtitle {
+    font-size: 0.65rem;
+  }
+  
+  .recording-action-btn {
+    padding: 0.4rem;
+  }
+  
+  .voice-answer-item {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .voice-answer-title {
+    font-size: 0.8rem;
+  }
+  
+  .voice-answer-subtitle {
+    font-size: 0.65rem;
+  }
+}
