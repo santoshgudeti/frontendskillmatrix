@@ -25,6 +25,8 @@ import JobPosterDashboard from './components/JobPortal/JobPosterDashboard';
 import HRApplications from './components/JobPortal/HRApplications';
 import PublicJobView from './components/JobPortal/PublicJobView';
 
+import DocumentUploadPage from './components/CandidatePortal/DocumentUploadPage';
+
 import './App.css';
 import './styles.css';
 
@@ -90,156 +92,175 @@ function App() {
             aria-live="assertive"
             aria-atomic="true"
           />
-        <Routes>
-          {/* Landing Routes (with Navbar + Footer) */}
-          <Route
-            path="/"
-            element={
-              <LandingLayout>
-                <main id="main-content" role="main" aria-label="SkillMatrix Landing Page">
-                  <LandingPage />
-                </main>
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/login"
-            element={
-              <LandingLayout>
-                <main id="main-content" role="main" aria-label="Login Page">
-                  <Login />
-                </main>
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <LandingLayout>
-                <main id="main-content" role="main" aria-label="Registration Page">
-                  <Register />
-                </main>
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/jobportal"
-            element={
-              <LandingLayout>
-                <main id="main-content" role="main" aria-label="Job Portal Entry">
-                  <JobPortalEntry />
-                </main>
-              </LandingLayout>
-            }
-          />
+          <Routes>
+            {/* Landing Routes (with Navbar + Footer) */}
+            <Route
+              path="/"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="SkillMatrix Landing Page">
+                    <LandingPage />
+                  </main>
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/login"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="Login Page">
+                    <Login />
+                  </main>
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="Registration Page">
+                    <Register />
+                  </main>
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/jobportal"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="Job Portal Entry">
+                    <JobPortalEntry />
+                  </main>
+                </LandingLayout>
+              }
+            />
 
-          <Route
-            path="/jobportal/login"
-            element={
-              <LandingLayout>
-                <main id="main-content" role="main" aria-label="Job Portal Login">
-                  <JobPortalLogin />
-                </main>
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/jobportal/register"
-            element={
-              <LandingLayout>
-                <main id="main-content" role="main" aria-label="Job Portal Registration">
-                  <JobPortalRegister />
-                </main>
-              </LandingLayout>
-            }
-          />
+            <Route
+              path="/jobportal/login"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="Job Portal Login">
+                    <JobPortalLogin />
+                  </main>
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/jobportal/register"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="Job Portal Registration">
+                    <JobPortalRegister />
+                  </main>
+                </LandingLayout>
+              }
+            />
 
-          <Route path="/jobportal/dashboard" element={
-            <JobPortalProtectedRoute>
-              <main id="main-content" role="main" aria-label="Job Poster Dashboard">
-                <JobPosterDashboard />
+            <Route path="/jobportal/dashboard" element={
+              <JobPortalProtectedRoute>
+                <main id="main-content" role="main" aria-label="Job Poster Dashboard">
+                  <JobPosterDashboard />
+                </main>
+              </JobPortalProtectedRoute>
+            } />
+
+
+
+            <Route
+              path="/jobportal/post"
+              element={
+                <JobPortalProtectedRoute>
+                  <main id="main-content" role="main" aria-label="Post Job Form">
+                    <JobPostForm />
+                  </main>
+                </JobPortalProtectedRoute>
+              }
+            />
+
+            <Route 
+              path="/jobportal/applications/:jobId" 
+              element={
+                <JobPortalProtectedRoute>
+                  <main id="main-content" role="main" aria-label="Job Applications">
+                    <HRApplications />
+                  </main>
+                </JobPortalProtectedRoute>
+              } 
+            />
+            <Route path="/jobs/:publicId" element={
+              <main id="main-content" role="main" aria-label="Public Job View">
+                <PublicJobView />
               </main>
-            </JobPortalProtectedRoute>
-          } />
+            } />
 
+            <Route
+              path="/forgot-password"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="Forgot Password">
+                    <ForgotPassword />
+                  </main>
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/reset-password"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="Reset Password">
+                    <ResetPassword />
+                  </main>
+                </LandingLayout>
+              }
+            />
 
-
-          <Route
-            path="/jobportal/post"
-            element={
-              <JobPortalProtectedRoute>
-                <main id="main-content" role="main" aria-label="Post Job Form">
-                  <JobPostForm />
+            {/* Dashboard & Internal Routes (no navbar/footer) */}
+            <Route
+              path="/dashboard/*"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/assessment/:token" element={
+              <main id="main-content" role="main" aria-label="Assessment Platform">
+                <AssessmentPlatform />
+              </main>
+            } />
+            <Route path="/interview/*" element={
+              <main id="main-content" role="main" aria-label="Interview Platform">
+                <InterviewPlatform />
+              </main>
+            } />
+            <Route path="/quiz/:token" element={
+              <main id="main-content" role="main" aria-label="Quiz Platform">
+                <Quiz proctored={false} />
+              </main>
+            } />
+            
+            {/* Add this new route for document upload */}
+            <Route 
+              path="/document-upload" 
+              element={
+                <main id="main-content" role="main" aria-label="Document Upload">
+                  <DocumentUploadPage />
                 </main>
-              </JobPortalProtectedRoute>
-            }
-          />
-
-          <Route 
-            path="/jobportal/applications/:jobId" 
-            element={
-              <JobPortalProtectedRoute>
-                <main id="main-content" role="main" aria-label="Job Applications">
-                  <HRApplications />
+              } 
+            />
+            <Route 
+              path="/document-upload/:documentCollectionId" 
+              element={
+                <main id="main-content" role="main" aria-label="Document Upload">
+                  <DocumentUploadPage />
                 </main>
-              </JobPortalProtectedRoute>
-            } 
-          />
-          <Route path="/jobs/:publicId" element={
-            <main id="main-content" role="main" aria-label="Public Job View">
-              <PublicJobView />
-            </main>
-          } />
-
-          <Route
-            path="/forgot-password"
-            element={
-              <LandingLayout>
-                <main id="main-content" role="main" aria-label="Forgot Password">
-                  <ForgotPassword />
-                </main>
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/reset-password"
-            element={
-              <LandingLayout>
-                <main id="main-content" role="main" aria-label="Reset Password">
-                  <ResetPassword />
-                </main>
-              </LandingLayout>
-            }
-          />
-
-          {/* Dashboard & Internal Routes (no navbar/footer) */}
-          <Route
-            path="/dashboard/*"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/assessment/:token" element={
-            <main id="main-content" role="main" aria-label="Assessment Platform">
-              <AssessmentPlatform />
-            </main>
-          } />
-          <Route path="/interview/*" element={
-            <main id="main-content" role="main" aria-label="Interview Platform">
-              <InterviewPlatform />
-            </main>
-          } />
-          <Route path="/quiz/:token" element={
-            <main id="main-content" role="main" aria-label="Quiz Platform">
-              <Quiz proctored={false} />
-            </main>
-          } />
-        </Routes>
-      </Router>
-    </FeedbackProvider>
-  </ErrorBoundary>
+              } 
+            />
+            
+          </Routes>
+        </Router>
+      </FeedbackProvider>
+    </ErrorBoundary>
   );
 }
 

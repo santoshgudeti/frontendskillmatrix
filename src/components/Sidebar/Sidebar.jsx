@@ -15,7 +15,8 @@ import {
   faBars,
   faXmark,
   faAngleLeft,
-  faAngleRight
+  faAngleRight,
+  faFileUpload
 } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -112,6 +113,8 @@ function Sidebar({ onLogout, onSidebarToggle, collapsed: propCollapsed, isMobile
   const userNavItems = [
     { to: '/dashboard', icon: faHome, text: 'Dashboard', exact: true },
     { to: '/dashboard/candidates', icon: faUsers, text: 'All Candidates' },
+    { to: '/dashboard/document-collection', icon: faFileUpload, text: 'Document Collection' },
+    { to: '/dashboard/templates', icon: faFileLines, text: 'Email Templates' },
     { to: '/dashboard/upload', icon: faFileLines, text: 'Upload Resumes' },
     { to: '/dashboard/response', icon: faChartBar, text: 'Evaluation Results' },
     { to: '/dashboard/schedule-test', icon: faCalendarPlus, text: 'Schedule Test' },
@@ -126,6 +129,8 @@ function Sidebar({ onLogout, onSidebarToggle, collapsed: propCollapsed, isMobile
     { to: '/dashboard/admin', icon: faHome, text: 'Admin Dashboard', exact: true },
     { to: '/dashboard/admin/users', icon: faUsers, text: 'User Management' },
     { to: '/dashboard/admin/pending', icon: faClock, text: 'Pending Approvals' },
+    { to: '/dashboard/document-collection', icon: faFileUpload, text: 'Document Collection' },
+    { to: '/dashboard/templates', icon: faFileLines, text: 'Email Templates' },
     { to: '/dashboard/upload', icon: faFileLines, text: 'Upload Resumes' },
     { to: '/dashboard/response', icon: faChartBar, text: 'Evaluation Results' },
     { to: '/dashboard/schedule-test', icon: faCalendarPlus, text: 'Schedule Test' },
@@ -356,7 +361,62 @@ function Sidebar({ onLogout, onSidebarToggle, collapsed: propCollapsed, isMobile
               className="mt-6 pt-6 border-t border-gray-200" 
               role="none"
             >
-             
+              <motion.button
+                onClick={() => {
+                  onLogout();
+                  if (isMobile) {
+                    setIsActive(false);
+                    onSidebarToggle && onSidebarToggle(false);
+                  }
+                }}
+                className={`group relative w-full flex items-center rounded-lg transition-all duration-200 text-gray-700 hover:bg-red-50 hover:text-red-700 focus:ring-2 focus:ring-red-500 focus:outline-none overflow-hidden ${
+                  isCollapsed 
+                    ? 'p-3 mx-1 justify-center' 
+                    : 'px-4 py-3 mx-1'
+                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                role="menuitem"
+                aria-label="Sign out of account"
+              >
+                {/* Icon Container */}
+                <div className={`relative flex items-center justify-center flex-shrink-0 ${
+                  isCollapsed ? 'w-6 h-6' : 'w-6 h-6'
+                }`}>
+                  <FontAwesomeIcon 
+                    icon={faRightFromBracket} 
+                    className={`transition-all duration-200 ${
+                      isCollapsed ? 'text-lg' : 'text-base'
+                    } text-gray-500 group-hover:text-red-600`}
+                    aria-hidden="true"
+                  />
+                </div>
+                
+                {/* Text Label */}
+                <AnimatePresence mode="wait">
+                  {!isCollapsed && (
+                    <motion.span 
+                      className="ml-3 font-medium text-sm truncate flex-1"
+                      variants={textVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                    >
+                      Sign Out
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+                
+                {/* Tooltip for Collapsed State */}
+                {isCollapsed && (
+                  <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg whitespace-nowrap z-50 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                    <div className="relative">
+                      Sign Out
+                      <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45" />
+                    </div>
+                  </div>
+                )}
+              </motion.button>
             </motion.li>
           </motion.ul>
         </nav>

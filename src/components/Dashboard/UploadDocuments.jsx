@@ -12,7 +12,9 @@ import {
   faExclamationTriangle,
   faUpload,
   faInfoCircle,
-  faUsers 
+  faUsers,
+  faCheck,
+  faFileAlt
 } from "@fortawesome/free-solid-svg-icons";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +24,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { axiosInstance } from "../../axiosUtils";
+import ReactMarkdown from "react-markdown";
 
 function UploadDocuments({ setResponseData }) {
   const navigate = useNavigate();
@@ -44,6 +47,12 @@ function UploadDocuments({ setResponseData }) {
     delete: false,
     update: false
   });
+  
+  // 🔥 NEW: JD validation states
+  const [jdValidationResult, setJdValidationResult] = useState(null);
+  const [isJdValidating, setIsJdValidating] = useState(false);
+  const [showJdValidationModal, setShowJdValidationModal] = useState(false);
+  const [isJdValidated, setIsJdValidated] = useState(false); // Track if JD has been validated
 
   // Enhanced loading state management
   const setLoading = (key, value) => {
@@ -95,6 +104,7 @@ function UploadDocuments({ setResponseData }) {
         
         setJobDescFile(file);
         setJobDescTitle(selectedJD.title || selectedJD.filename);
+        setIsJdValidated(false); // Reset validation status when new JD is loaded
       } catch (error) {
         toast.error('Failed to load JD content');
         console.error("Error loading JD:", error);
@@ -175,6 +185,303 @@ function UploadDocuments({ setResponseData }) {
     );
   };
 
+  // 🔥 NEW: JD Validation Modal Component with Markdown display and logging
+  const JdValidationModal = () => {
+    console.log('🖼️ Rendering JdValidationModal', {
+      showJdValidationModal: showJdValidationModal,
+      hasJdValidationResult: !!jdValidationResult,
+      timestamp: new Date().toISOString()
+    });
+    
+    if (!showJdValidationModal || !jdValidationResult) {
+      console.log('🖼️ JdValidationModal not rendering - conditions not met');
+      return null;
+    }
+
+    // Fixed: Access the correct nested structure
+    const validationData = jdValidationResult.data;
+    const isValid = validationData?.validation?.isValid;
+    const isComplete = validationData?.validation?.isComplete;
+    const errors = validationData?.validation?.errors || [];
+    const warnings = validationData?.validation?.warnings || [];
+    const missingCriticalFields = validationData?.validation?.missingCriticalFields || [];
+    const missingRecommendedFields = validationData?.validation?.missingRecommendedFields || [];
+    const suitabilityScore = validationData?.validation?.suitabilityScore || 0;
+    const jdQualityAssessment = validationData?.validation?.jdQualityAssessment || 'Unknown';
+    const validationCriteria = validationData?.validation?.validationCriteria || {};
+    const documentType = validationData?.validation?.documentType || 'Unknown';
+    const extractedData = validationData?.extractedData || {};
+    const detailedReport = validationData?.detailedReport || '';
+    
+    console.log('📋 JdValidationModal data:', {
+      isValid: isValid,
+      isComplete: isComplete,
+      suitabilityScore: suitabilityScore,
+      hasDetailedReport: !!detailedReport,
+      reportLength: detailedReport?.length || 0,
+      validationDataKeys: validationData ? Object.keys(validationData) : []
+    });
+
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <motion.div 
+          className="bg-white rounded-2xl shadow-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold text-gray-900">
+              Job Description Validation Result
+            </h3>
+            <button 
+              className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+              onClick={() => {
+                console.log('🚪 Closing JdValidationModal');
+                setShowJdValidationModal(false);
+              }}
+            >
+              <FontAwesomeIcon icon={faTimes} size="lg" />
+            </button>
+          </div>
+
+          <div className="mb-6 p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+            <div className="flex items-center gap-3 mb-3">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                isValid ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+              }`}>
+                <FontAwesomeIcon icon={isValid ? faCheck : faExclamationTriangle} size="lg" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-lg">
+                  {isValid ? 'Valid Job Description' : 'Invalid Job Description'}
+                </h4>
+                <p className="text-gray-600">
+                  {isValid 
+                    ? 'This job description is valid and can be used for matching.' 
+                    : 'This job description is invalid and cannot be used.'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+              <div className="bg-white p-3 rounded-lg border border-gray-200">
+                <div className="text-sm text-gray-500">Document Type</div>
+                <div className="text-lg font-bold text-blue-600">{documentType}</div>
+              </div>
+              <div className="bg-white p-3 rounded-lg border border-gray-200">
+                <div className="text-sm text-gray-500">Suitability Score</div>
+                <div className="text-lg font-bold text-blue-600">{suitabilityScore}/100</div>
+              </div>
+              <div className="bg-white p-3 rounded-lg border border-gray-200">
+                <div className="text-sm text-gray-500">Quality Assessment</div>
+                <div className="text-lg font-bold text-purple-600">{jdQualityAssessment}</div>
+              </div>
+              <div className="bg-white p-3 rounded-lg border border-gray-200">
+                <div className="text-sm text-gray-500">Completeness</div>
+                <div className={`text-lg font-bold ${isComplete ? 'text-green-600' : 'text-yellow-600'}`}>
+                  {isComplete ? 'Complete' : 'Incomplete'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {extractedData && (
+            <div className="mb-6 p-4 rounded-lg bg-gray-50 border border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-2">Extracted Information</h4>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="text-sm">
+                  <span className="font-medium">Title:</span> {extractedData.title || 'N/A'}
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium">Company:</span> {extractedData.company || 'N/A'}
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium">Skills Count:</span> {extractedData.skillsCount || 0}
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium">Requirements Count:</span> {extractedData.requirementsCount || 0}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Validation Criteria Assessment */}
+          {Object.keys(validationCriteria).length > 0 && (
+            <div className="mb-6 p-4 rounded-lg bg-gray-50 border border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-2">Validation Criteria Assessment</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {Object.entries(validationCriteria).map(([criteria, met]) => (
+                  <div key={criteria} className="flex items-center gap-2">
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                      met ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                    }`}>
+                      <FontAwesomeIcon icon={met ? faCheck : faTimes} size="sm" />
+                    </div>
+                    <span className={`text-sm ${met ? 'text-green-700' : 'text-red-700'}`}>
+                      {criteria.replace(/([A-Z])/g, ' $1').trim()}
+                      {met ? ' - MET' : ' - NOT MET'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!isValid && missingCriticalFields.length > 0 && (
+            <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200">
+              <h4 className="font-semibold text-red-800 mb-2 flex items-center gap-2">
+                <FontAwesomeIcon icon={faExclamationTriangle} />
+                Missing Critical Fields
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {missingCriticalFields.map((field, index) => (
+                  <span 
+                    key={index} 
+                    className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium"
+                  >
+                    {field}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!isValid && errors.length > 0 && (
+            <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200">
+              <h4 className="font-semibold text-red-800 mb-2 flex items-center gap-2">
+                <FontAwesomeIcon icon={faExclamationTriangle} />
+                Critical Errors
+              </h4>
+              <ul className="list-disc pl-5 space-y-1 text-red-700">
+                {errors.map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {warnings.length > 0 && (
+            <div className="mb-6 p-4 rounded-lg bg-yellow-50 border border-yellow-200">
+              <h4 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
+                <FontAwesomeIcon icon={faExclamationTriangle} />
+                Warnings
+              </h4>
+              <ul className="list-disc pl-5 space-y-1 text-yellow-700">
+                {warnings.map((warning, index) => (
+                  <li key={index}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {missingRecommendedFields.length > 0 && (
+            <div className="mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
+              <h4 className="font-semibold text-blue-800 mb-2">Missing Recommended Information</h4>
+              <div className="flex flex-wrap gap-2">
+                {missingRecommendedFields.map((field, index) => (
+                  <span 
+                    key={index} 
+                    className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                  >
+                    {field}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Display the detailed report as Markdown */}
+          {detailedReport && (
+            <div className="mb-6 p-4 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-300">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+                  <FontAwesomeIcon icon={faFileAlt} className="text-blue-500" />
+                  Detailed Validation Report
+                </h4>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  isValid 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {isValid ? 'VALID' : 'INVALID'}
+                </span>
+              </div>
+              <div className="prose max-w-none bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                <div className="font-mono text-sm whitespace-pre-wrap leading-relaxed text-gray-700 max-h-96 overflow-y-auto">
+                  {detailedReport}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 mt-6">
+            {!isValid ? (
+              <div className="flex flex-col items-end gap-2">
+                <div className="flex items-center gap-2 text-red-600 bg-red-50 px-4 py-2 rounded-lg">
+                  <FontAwesomeIcon icon={faExclamationTriangle} />
+                  <span className="font-medium">This Job Description is not valid for processing</span>
+                </div>
+                <div className="flex gap-3">
+                  <motion.button
+                    className="px-6 py-2.5 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors"
+                    onClick={() => {
+                      console.log('🔄 User chose to review JD again');
+                      setShowJdValidationModal(false);
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Review & Fix
+                  </motion.button>
+                  <motion.button
+                    className="px-6 py-2.5 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors"
+                    onClick={() => {
+                      console.log('❌ User closed modal for invalid JD');
+                      setShowJdValidationModal(false);
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Close
+                  </motion.button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <motion.button
+                  className="px-6 py-2.5 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors"
+                  onClick={() => {
+                    console.log('🔄 User chose to review JD again');
+                    setShowJdValidationModal(false);
+                  }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Review Again
+                </motion.button>
+                <motion.button
+                  className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                  onClick={() => {
+                    console.log('✅ User confirmed valid JD, proceeding');
+                    setShowJdValidationModal(false);
+                    setIsJdValidated(true); // Mark JD as validated
+                  }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <FontAwesomeIcon icon={faCheck} />
+                  Confirm and Proceed
+                </motion.button>
+              </>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
+
   const handleDeleteConfirmation = (jd) => {
     setJdToDelete(jd);
     setShowDeleteConfirm(true);
@@ -216,6 +523,7 @@ function UploadDocuments({ setResponseData }) {
       setJobDescFile(file);
       setJobDescTitle(file.name.replace('.pdf', ''));
       setSelectedJD(null); // Clear selected JD when uploading new file
+      setIsJdValidated(false); // Reset validation status when new JD is uploaded
     }
     setActiveModal(null);
   };
@@ -227,6 +535,7 @@ function UploadDocuments({ setResponseData }) {
       setJobDescFile(null);
       setJobDescTitle("");
       setSelectedJD(null);
+      setIsJdValidated(false); // Reset validation status when JD is removed
     }
   };
 
@@ -254,6 +563,113 @@ function UploadDocuments({ setResponseData }) {
     }
   };
 
+  // 🔥 NEW: JD Validation Function with comprehensive logging
+  const validateJobDescription = async () => {
+    console.log('🔍 Initiating JD Validation...', {
+      hasJobDescFile: !!jobDescFile,
+      fileName: jobDescFile?.name,
+      fileSize: jobDescFile?.size,
+      timestamp: new Date().toISOString()
+    });
+    
+    if (!jobDescFile) {
+      console.log('❌ JD Validation Failed: No job description file');
+      toast.error('Please upload a job description');
+      return null;
+    }
+
+    try {
+      setIsJdValidating(true);
+      console.log('🔄 Preparing validation request...');
+      
+      const formData = new FormData();
+      formData.append("job_description", jobDescFile);
+      
+      console.log('📤 Sending validation request to /api/validate-jd');
+
+      const response = await axiosInstance.post(
+        "/api/validate-jd",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      console.log('📥 Received validation response:', {
+        status: response.status,
+        hasData: !!response.data,
+        hasSuccess: response.data?.success,
+        hasValidationData: !!response.data?.data,
+        // Fixed: Access the correct nested structure
+        isValid: response.data?.data?.validation?.isValid,
+        dataKeys: response.data?.data ? Object.keys(response.data.data) : []
+      });
+
+      // Check if response has the expected structure
+      if (!response.data) {
+        console.log('❌ Invalid response structure: No data');
+        toast.error('Invalid response from validation service');
+        return null;
+      }
+      
+      if (!response.data.success) {
+        console.log('❌ Validation API returned error:', response.data.error);
+        toast.error(response.data.error || 'Validation failed');
+        return null;
+      }
+      
+      if (!response.data.data) {
+        console.log('❌ Invalid response structure: No validation data');
+        toast.error('Invalid validation data received');
+        return null;
+      }
+
+      // Log detailed validation information
+      const validationData = response.data.data;
+      console.log('📋 Detailed Validation Data:', {
+        isValid: validationData.validation?.isValid,
+        isComplete: validationData.validation?.isComplete,
+        suitabilityScore: validationData.validation?.suitabilityScore,
+        hasErrors: validationData.validation?.errors?.length > 0,
+        errorCount: validationData.validation?.errors?.length || 0,
+        hasWarnings: validationData.validation?.warnings?.length > 0,
+        warningCount: validationData.validation?.warnings?.length || 0,
+        hasDetailedReport: !!validationData.detailedReport,
+        reportLength: validationData.detailedReport?.length || 0
+      });
+
+      setJdValidationResult(response.data);
+      setShowJdValidationModal(true);
+      
+      return response.data;
+    } catch (error) {
+      console.error('❌ JD Validation Error:', {
+        message: error.message,
+        responseStatus: error.response?.status,
+        responseData: error.response?.data,
+        stack: error.stack
+      });
+      
+      // More detailed error handling
+      if (error.response) {
+        // Server responded with error status
+        const errorMessage = error.response.data?.error || `Validation failed with status ${error.response.status}`;
+        toast.error(errorMessage);
+        console.error("Server Error Details:", error.response.data);
+      } else if (error.request) {
+        // Request was made but no response received
+        toast.error('No response from validation service. Please try again.');
+        console.error("No response received:", error.request);
+      } else {
+        // Something else happened
+        toast.error('Error validating job description. Please try again.');
+        console.error("Request setup error:", error.message);
+      }
+      
+      return null;
+    } finally {
+      setIsJdValidating(false);
+      console.log('🏁 JD Validation process completed');
+    }
+  };
 
 const handleDeleteJD = async () => {
     try {
@@ -268,6 +684,7 @@ const handleDeleteJD = async () => {
         setJobDescFile(null);
         setJobDescTitle("");
         setSelectedJD(null);
+        setIsJdValidated(false); // Reset validation status when JD is deleted
       }
       toast.success('JD deleted successfully');
     } catch (error) {
@@ -512,7 +929,7 @@ const handleDeleteJD = async () => {
     </div>
   );
 
-const UploadSection = ({ title, files, file, type, icon }) => {
+const UploadSection = ({ title, files, file, type, icon, isJdValidated }) => {
   const titleInputRef = useRef(null);
 
   useEffect(() => {
@@ -521,44 +938,83 @@ const UploadSection = ({ title, files, file, type, icon }) => {
     }
   }, [isEditingTitle]);
 
+  // Check if this is the resume section and JD is not yet validated
+  const isResumeSectionDisabled = type === "resume" && !isJdValidated;
+
   return (
     <motion.div 
-      className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100"
+      className={`rounded-2xl shadow-xl p-6 border ${
+        isResumeSectionDisabled 
+          ? 'bg-gray-100 border-gray-200 opacity-70' 
+          : 'bg-white border-gray-100'
+      }`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      whileHover={{ y: -5 }}
+      whileHover={isResumeSectionDisabled ? {} : { y: -5 }}
     >
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-primary-gradient rounded-lg flex items-center justify-center text-white">
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white ${
+          isResumeSectionDisabled ? 'bg-gray-400' : 'bg-primary-gradient'
+        }`}>
           <FontAwesomeIcon icon={icon} />
         </div>
-        <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
+        <h3 className={`text-xl font-semibold ${
+          isResumeSectionDisabled ? 'text-gray-500' : 'text-gray-900'
+        }`}>
+          {title}
+        </h3>
+        {isResumeSectionDisabled && (
+          <div className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+            Validate JD First
+          </div>
+        )}
       </div>
       
       {type === "jobDesc" && <JDSelector />}
       
       {type === "resume" && files.length === 0 ? (
         <div 
-          className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer transition-all duration-300 hover:border-primary-400 hover:bg-primary-25 group"
-          onClick={() => setActiveModal(type)}
+          className={`border-2 border-dashed rounded-xl p-8 text-center ${
+            isResumeSectionDisabled
+              ? 'border-gray-300 cursor-not-allowed'
+              : 'border-gray-300 cursor-pointer transition-all duration-300 hover:border-primary-400 hover:bg-primary-25 group'
+          }`}
+          onClick={isResumeSectionDisabled ? undefined : () => setActiveModal(type)}
         >
           <FontAwesomeIcon 
             icon={faCloudArrowUp} 
-            className="text-4xl text-gray-400 group-hover:text-primary-500 mb-4 transition-colors duration-300" 
+            className={`text-4xl mb-4 transition-colors duration-300 ${
+              isResumeSectionDisabled 
+                ? 'text-gray-300' 
+                : 'text-gray-400 group-hover:text-primary-500'
+            }`} 
           />
-          <p className="text-lg font-medium text-gray-700 mb-2">No files uploaded yet!</p>
+          <p className={`text-lg font-medium mb-2 ${
+            isResumeSectionDisabled ? 'text-gray-400' : 'text-gray-700'
+          }`}>
+            No files uploaded yet!
+          </p>
           <div className="flex justify-center">
             <motion.button 
-              className="bg-primary-gradient text-white font-medium px-6 py-2.5 rounded-lg transition-all mb-3 flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              className={`font-medium px-6 py-2.5 rounded-lg transition-all mb-3 flex items-center justify-center gap-2 shadow-md ${
+                isResumeSectionDisabled
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-primary-gradient text-white hover:shadow-lg'
+              }`}
+              whileHover={isResumeSectionDisabled ? {} : { scale: 1.05 }}
+              whileTap={isResumeSectionDisabled ? {} : { scale: 0.95 }}
+              disabled={isResumeSectionDisabled}
             >
               <FontAwesomeIcon icon={faPlus} />
               Upload Resumes
             </motion.button>
           </div>
-          <p className="text-sm text-gray-500">Format: PDF & Max file size: 25 MB</p>
+          <p className={`text-sm ${
+            isResumeSectionDisabled ? 'text-gray-400' : 'text-gray-500'
+          }`}>
+            Format: PDF & Max file size: 25 MB
+          </p>
         </div>
       ) : type === "resume" ? (
         <div className="space-y-3">
@@ -592,10 +1048,15 @@ const UploadSection = ({ title, files, file, type, icon }) => {
           </div>
           <div className="flex justify-center">
             <motion.button 
-              className="border border-primary-600 text-primary-600 hover:bg-primary-50 font-medium py-2.5 px-4 rounded-lg transition-colors w-full mt-4 flex items-center justify-center gap-2 shadow-sm hover:shadow-md max-w-xs mx-auto"
-              onClick={() => setActiveModal(type)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              className={`py-2.5 px-4 rounded-lg transition-colors w-full mt-4 flex items-center justify-center gap-2 shadow-sm max-w-xs mx-auto ${
+                isResumeSectionDisabled
+                  ? 'border border-gray-300 bg-gray-200 text-gray-500 cursor-not-allowed'
+                  : 'border border-primary-600 text-primary-600 hover:bg-primary-50 hover:shadow-md'
+              }`}
+              onClick={isResumeSectionDisabled ? undefined : () => setActiveModal(type)}
+              whileHover={isResumeSectionDisabled ? {} : { scale: 1.02 }}
+              whileTap={isResumeSectionDisabled ? {} : { scale: 0.98 }}
+              disabled={isResumeSectionDisabled}
             >
               <FontAwesomeIcon icon={faPlus} />
               Add More Files
@@ -708,36 +1169,76 @@ const UploadSection = ({ title, files, file, type, icon }) => {
   );
 };
 
+  // 🔥 MODIFIED: handleSubmit function with step-by-step validation and logging
   const handleSubmit = async () => {
+    console.log('📥 handleSubmit initiated', {
+      hasJobDescFile: !!jobDescFile,
+      resumeCount: resumeFiles.length,
+      isJdValidated: isJdValidated,
+      timestamp: new Date().toISOString()
+    });
+    
     try {
       if (!usageLimits) {
+        console.log('❌ Submission blocked: No usage limits data');
         toast.error('Unable to verify your subscription status. Please try again.');
         return;
       }
 
-      if (resumeFiles.length === 0) {
-        toast.error('Please upload at least one resume');
-        return;
-      }
-
       if (!jobDescFile) {
+        console.log('❌ Submission blocked: No job description file');
         toast.error('Please upload a job description');
         return;
       }
 
+      // Step 1: Validate JD if not already validated
+      if (!isJdValidated) {
+        console.log('❌ Submission blocked: JD not validated');
+        toast.error('Please validate the job description first');
+        return;
+      }
+
+      // Step 2: Check if resumes are uploaded
+      if (resumeFiles.length === 0) {
+        console.log('❌ Submission blocked: No resumes uploaded');
+        toast.error('Please upload at least one resume');
+        return;
+      }
+
+      // Additional check: Verify that the JD is actually valid
+      if (jdValidationResult) {
+        const isValid = jdValidationResult.data?.validation?.isValid;
+        console.log('🔍 Checking JD validity:', { isValid: isValid });
+        
+        if (!isValid) {
+          console.log('❌ Submission blocked: JD is not valid');
+          toast.error('Job description is not valid. Please review the validation results.');
+          return;
+        }
+      }
+
+      console.log('✅ Validation passed, proceeding with submission');
+
       if (!usageLimits.isAdmin && usageLimits.subscription?.limits) {
         const remainingResumes = usageLimits.subscription.limits.resumeUploads - (usageLimits.usage?.resumeUploads || 0);
         if (resumeFiles.length > remainingResumes) {
+          console.log('❌ Submission blocked: Resume limit exceeded', {
+            resumeCount: resumeFiles.length,
+            remainingResumes: remainingResumes
+          });
           toast.error(`You can only upload ${remainingResumes} more resumes with your current plan`);
           return;
         }
 
         if ((usageLimits.usage?.jdUploads || 0) >= usageLimits.subscription.limits.jdUploads) {
+          console.log('❌ Submission blocked: JD upload limit exceeded');
           toast.error('You have reached your job description upload limit');
           return;
         }
       }
 
+      // Proceed with actual submission
+      console.log('📤 Submitting files to /api/submit');
       setIsSubmitting(true);
       
       const formData = new FormData();
@@ -754,19 +1255,33 @@ const UploadSection = ({ title, files, file, type, icon }) => {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
+      console.log('📥 Submission response received', {
+        status: response.status,
+        hasResults: !!response.data?.results,
+        duplicateCount: response.data?.duplicateCount
+      });
+
       toast.success('Files uploaded successfully!');
       setResponseData({
         results: response.data?.results || [],
         duplicateCount: response.data?.duplicateCount || 0,
       });
-  navigate("/dashboard/response", { state: { fromUpload: true } });
+      navigate("/dashboard/response", { state: { fromUpload: true } });
 
     } catch (error) {
+      console.error('❌ Submission Error:', {
+        message: error.message,
+        responseStatus: error.response?.status,
+        responseData: error.response?.data,
+        stack: error.stack
+      });
+      
       const errorMessage = error.response?.data?.error || 'Error submitting files';
       toast.error(errorMessage);
       console.error("Error details:", error.response?.data || error.message);
     } finally {
       setIsSubmitting(false);
+      console.log('🏁 Submission process completed');
     }
   };
 
@@ -799,34 +1314,67 @@ const UploadSection = ({ title, files, file, type, icon }) => {
         {/* Upload Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <UploadSection 
-            title="Upload Resumes" 
-            files={resumeFiles} 
-            type="resume" 
-            icon={faUsers}
-          />
-          <UploadSection 
             title="Upload Job Description" 
             file={jobDescFile} 
             type="jobDesc" 
             icon={faFile}
+            isJdValidated={isJdValidated}
+          />
+          <UploadSection 
+            title="Upload Resumes" 
+            files={resumeFiles} 
+            type="resume" 
+            icon={faUsers}
+            isJdValidated={isJdValidated}
           />
         </div>
 
-        {/* Submit Button */}
+        {/* Action Buttons */}
         <motion.div 
-          className="flex justify-center"
+          className="flex flex-col sm:flex-row justify-center gap-4 mb-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
+          {/* Validate JD Button - Only enabled when JD is uploaded but not yet validated */}
           <button
             className={`relative overflow-hidden px-8 py-4 text-lg font-semibold rounded-xl text-white shadow-xl hover:shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
-              isSubmitting 
-                ? 'bg-gradient-to-r from-primary-600 to-primary-700 animate-pulse' 
+              isJdValidating || !jobDescFile || isJdValidated
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+            }`}
+            onClick={validateJobDescription}
+            disabled={isJdValidating || !jobDescFile || isJdValidated}
+          >
+            <div className="flex items-center justify-center gap-3">
+              {isJdValidating ? (
+                <>
+                  <FontAwesomeIcon icon={faSpinner} spin className="text-xl" />
+                  <span>Validating...</span>
+                </>
+              ) : isJdValidated ? (
+                <>
+                  <FontAwesomeIcon icon={faCheckCircle} className="text-xl" />
+                  <span>JD Validated</span>
+                </>
+              ) : (
+                <>
+                  <FontAwesomeIcon icon={faFile} className="text-xl" />
+                  <span>Validate Job Description</span>
+                </>
+              )}
+            </div>
+          </button>
+
+          {/* Submit Button - Only enabled when JD is validated and resumes are uploaded */}
+          <button
+            className={`relative overflow-hidden px-8 py-4 text-lg font-semibold rounded-xl text-white shadow-xl hover:shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
+              isSubmitting || !isJdValidated || resumeFiles.length === 0
+                ? 'bg-gray-400 cursor-not-allowed' 
                 : 'bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700'
             }`}
             onClick={handleSubmit}
-            disabled={isSubmitting || resumeFiles.length === 0 || !jobDescFile}
+            disabled={isSubmitting || !isJdValidated || resumeFiles.length === 0}
           >
             <div className="flex items-center justify-center gap-3">
               {isSubmitting ? (
@@ -916,6 +1464,11 @@ const UploadSection = ({ title, files, file, type, icon }) => {
             type="delete"
           />
         )}
+      </AnimatePresence>
+
+      {/* 🔥 NEW: JD Validation Modal */}
+      <AnimatePresence>
+        {showJdValidationModal && <JdValidationModal />}
       </AnimatePresence>
 
       <ToastContainer 

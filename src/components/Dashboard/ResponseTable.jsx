@@ -4,7 +4,10 @@ import {
   faMagnifyingGlass, faRotateRight, faFileAlt, faVideo,
   faChevronDown, faChevronUp, faStar, faDownload, faEye,
   faTools, faUserTie, faGraduationCap, faBuilding, faBriefcase,
-  faIdBadge, faCalendarAlt, faFilePdf, faTimes, faSpinner, faPlayCircle
+  faIdBadge, faCalendarAlt, faFilePdf, faTimes, faSpinner, faPlayCircle,
+  faHandshake, faDesktop, faMicrophone, faMobile, faEnvelope, faShieldAlt,
+  faCheckCircle, faExclamationTriangle, faChartLine, faLightbulb,
+  faUserClock, faClipboardList, faChartBar, faCircle,faCheck 
 } from "@fortawesome/free-solid-svg-icons";
 import { faGoogle, faMicrosoft } from "@fortawesome/free-brands-svg-icons";
 import React, { useState, useEffect, useRef, useMemo } from "react";
@@ -19,6 +22,7 @@ import { Dialog } from "../ui/Dialog";
 import { axiosInstance } from "../../axiosUtils";
 import { useMediaOperations } from "../../hooks/useMediaOperations";
 import TopNotificationModal from "./TopNotificationModal";
+import { debouncedToast } from "../../utils/toastUtils";
 
 
 function ResponseTable({ data, duplicateCount }) {
@@ -34,13 +38,18 @@ function ResponseTable({ data, duplicateCount }) {
   });
   const [showModal, setShowModal] = useState({});
   const [allSelected, setAllSelected] = useState({});
+  
+  // 🔥 NEW: Bulk selection state for candidate resumes
+  const [selectedCandidates, setSelectedCandidates] = useState(new Set());
+  const [isAllCandidatesSelected, setIsAllCandidatesSelected] = useState(false);
+  const [bulkDownloadInProgress, setBulkDownloadInProgress] = useState(false);
 
   // Use the shared media operations hook
   const { mediaOperations, viewAudio, downloadAudio, viewVideo, downloadVideo, extractFileKey } = useMediaOperations();
   
   // Add state for dropdowns
-  const [resumeDropdownOpen, setResumeDropdownOpen] = useState({});
-  const [interviewDropdownOpen, setInterviewDropdownOpen] = useState({});
+  const [openResumeDropdown, setOpenResumeDropdown] = useState(null);
+  const [openInterviewDropdown, setOpenInterviewDropdown] = useState(null);
   
   // Refs for dropdown containers
   const resumeDropdownRefs = useRef({});
@@ -91,6 +100,30 @@ function ResponseTable({ data, duplicateCount }) {
         const matchingResult = result["Resume Data"] || result.matchingResult?.[0]?.["Resume Data"] || result;
         const analysis = result.matchingResult?.[0]?.Analysis || result.Analysis || {};
         const matchingPercentage = result["Matching Percentage"] || result.matchingResult?.[0]?.["Matching Percentage"] || analysis["Matching Score"] || 0;
+        // Debug logging - uncomment to see data structure
+        // console.log('Processing result:', { result, matchingResult, analysis });
+        
+        // More robust extraction of new fields from various possible locations
+        const experienceThresholdCompliance = 
+          analysis["Experience Threshold Compliance"] || 
+          result["Experience Threshold Compliance"] || 
+          result.matchingResult?.[0]?.["Experience Threshold Compliance"] ||
+          "N/A";
+          
+        const recentExperienceRelevance = 
+          analysis["Recent Experience Relevance"] || 
+          result["Recent Experience Relevance"] || 
+          result.matchingResult?.[0]?.["Recent Experience Relevance"] ||
+          "N/A";
+          
+        const analysisSummary = 
+          result["Analysis Summary"] || 
+          analysis["Analysis Summary"] || 
+          analysis["analysisSummary"] || 
+          result.analysisSummary ||
+          result.matchingResult?.[0]?.["Analysis Summary"] ||
+          "N/A";
+        
         return { 
           ...result, 
           matchingResult, 
@@ -107,6 +140,10 @@ function ResponseTable({ data, duplicateCount }) {
             "Candidate Industrial Experience": analysis["Candidate Industrial Experience"] || "N/A",
             "Required Domain Experience": analysis["Required Domain Experience"] || "N/A",
             "Candidate Domain Experience": analysis["Candidate Domain Experience"] || "N/A",
+            // New fields - comprehensive extraction to handle different API response formats
+            "Experience Threshold Compliance": experienceThresholdCompliance,
+            "Recent Experience Relevance": recentExperienceRelevance,
+            "Analysis Summary": analysisSummary
           }
         };
       })
@@ -210,6 +247,9 @@ function ResponseTable({ data, duplicateCount }) {
     });
     setAllSelected({});
     setFilteredMembers(members);
+    // Clear bulk selection when filters change
+    setSelectedCandidates(new Set());
+    setIsAllCandidatesSelected(false);
   };
 
   const toggleExpand = (index, type) => {
@@ -278,27 +318,149 @@ function ResponseTable({ data, duplicateCount }) {
     setExpandedRow(expandedRow === id ? null : id);
   };
 
-  // Handle click outside to close dropdowns
+  // 🔥 NEW: Bulk selection handlers
+  const handleCandidateSelection = (candidateIndex, isSelected) => {
+    const newSelected = new Set(selectedCandidates);
+    if (isSelected) {
+      newSelected.add(candidateIndex);
+    } else {
+      newSelected.delete(candidateIndex);
+    }
+    setSelectedCandidates(newSelected);
+    
+    // Update "Select All" state
+    setIsAllCandidatesSelected(newSelected.size === filteredMembers.length && filteredMembers.length > 0);
+  };
+
+  const handleSelectAllCandidates = (isSelected) => {
+    if (isSelected) {
+      const allIndices = new Set(filteredMembers.map((_, index) => index));
+      setSelectedCandidates(allIndices);
+      setIsAllCandidatesSelected(true);
+    } else {
+      setSelectedCandidates(new Set());
+      setIsAllCandidatesSelected(false);
+    }
+  };
+
+  const clearAllSelections = () => {
+    setSelectedCandidates(new Set());
+    setIsAllCandidatesSelected(false);
+  };
+
+  // 🔥 NEW: Bulk download functionality
+  const handleBulkResumeDownload = async () => {
+    if (selectedCandidates.size === 0) {
+      debouncedToast.warning('⚠️ Please select candidates to download resumes', 'bulk-download-warning');
+      return;
+    }
+
+    setBulkDownloadInProgress(true);
+    const loadingToast = debouncedToast.loading(`📦 Preparing to download ${selectedCandidates.size} resumes...`);
+    
+    try {
+      console.log('🔥 [BULK DOWNLOAD] Starting bulk resume download:', {
+        selectedCount: selectedCandidates.size,
+        timestamp: new Date().toISOString()
+      });
+
+      const selectedCandidateData = Array.from(selectedCandidates).map(index => {
+        const candidate = filteredMembers[index];
+        return {
+          index,
+          name: candidate.matchingResult?.name || candidate.name || `Candidate_${index + 1}`,
+          email: candidate.matchingResult?.email || candidate.email,
+          resumeId: candidate.resumeId?._id || candidate.resumeId || candidate.Id || candidate._id,
+          matchingPercentage: candidate.matchingPercentage || 0
+        };
+      });
+
+      console.log('📊 [BULK DOWNLOAD] Selected candidates:', selectedCandidateData);
+
+      // Collect resume IDs for bulk download
+      const resumeIds = selectedCandidateData
+        .map(candidate => candidate.resumeId)
+        .filter(Boolean);
+
+      if (resumeIds.length === 0) {
+        throw new Error('No valid resume IDs found for selected candidates');
+      }
+
+      console.log('📋 [BULK DOWNLOAD] Resume IDs to download:', resumeIds);
+
+      // Call backend bulk download endpoint
+      const response = await axiosInstance.post('/api/resumes/bulk-download', {
+        resumeIds: resumeIds,
+        candidates: selectedCandidateData
+      });
+
+      debouncedToast.dismiss(loadingToast);
+
+      if (response.data.success) {
+        const { downloadUrl, summary } = response.data;
+        
+        // Start the bulk download
+        const downloadLink = document.createElement('a');
+        downloadLink.href = downloadUrl;
+        downloadLink.download = `bulk_resumes_${new Date().toISOString().split('T')[0]}.zip`;
+        downloadLink.style.display = 'none';
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+
+        debouncedToast.success(
+          `📥 Downloaded ${summary.successful}/${summary.total} resumes successfully!`,
+          'bulk-download-success'
+        );
+
+        console.log('✅ [BULK DOWNLOAD] Bulk download completed:', summary);
+        
+        // Clear selections after successful download
+        clearAllSelections();
+      } else {
+        throw new Error(response.data.error || 'Bulk download failed');
+      }
+    } catch (error) {
+      debouncedToast.dismiss(loadingToast);
+      console.error('❌ [BULK DOWNLOAD] Error:', error);
+      
+      let errorMessage = 'Failed to download resumes';
+      if (error.message.includes('No valid resume IDs')) {
+        errorMessage = 'No valid resumes found for selected candidates';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Some resumes are no longer available';
+      } else if (error.response?.status === 403) {
+        errorMessage = 'Access denied to download resumes';
+      }
+      
+      debouncedToast.error(`❌ ${errorMessage}`, 'bulk-download-error');
+    } finally {
+      setBulkDownloadInProgress(false);
+    }
+  };
+
+  // Update filtered members effect to clear selections
+  useEffect(() => {
+    setSelectedCandidates(new Set());
+    setIsAllCandidatesSelected(false);
+  }, [filteredMembers]);
+
+  // STATE REFACTOR: Only one resume and one interview dropdown open at a time
+  // Ensure dropdowns are triggered/cancelled ONLY on click or outside click, never hover/leave
   useEffect(() => {
     const handleClickOutside = (event) => {
-      Object.keys(resumeDropdownRefs.current).forEach(key => {
-        if (resumeDropdownRefs.current[key] && !resumeDropdownRefs.current[key].contains(event.target)) {
-          setResumeDropdownOpen(prev => ({ ...prev, [key]: false }));
-        }
-      });
-      
-      Object.keys(interviewDropdownRefs.current).forEach(key => {
-        if (interviewDropdownRefs.current[key] && !interviewDropdownRefs.current[key].contains(event.target)) {
-          setInterviewDropdownOpen(prev => ({ ...prev, [key]: false }));
-        }
-      });
+      const inResume = openResumeDropdown &&
+        resumeDropdownRefs.current[openResumeDropdown] &&
+        resumeDropdownRefs.current[openResumeDropdown].contains(event.target);
+      const inInterview = openInterviewDropdown &&
+        interviewDropdownRefs.current[openInterviewDropdown] &&
+        interviewDropdownRefs.current[openInterviewDropdown].contains(event.target);
+      if (!inResume) setOpenResumeDropdown(null);
+      if (!inInterview) setOpenInterviewDropdown(null);
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openResumeDropdown, openInterviewDropdown]);
 
   // Add this function to render media actions if available
   const renderMediaActions = (assessmentSession, index) => {
@@ -718,10 +880,113 @@ function ResponseTable({ data, duplicateCount }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
+          {/* 🔥 NEW: Bulk Action Panel */}
+          <AnimatePresence>
+            {selectedCandidates.size > 0 && (
+              <motion.div
+                className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 border-b"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {selectedCandidates.size} candidate{selectedCandidates.size !== 1 ? 's' : ''} selected
+                      </span>
+                      <div className="w-px h-4 bg-white/30"></div>
+                      <span className="text-xs opacity-90">
+                        Ready for bulk download
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <motion.button
+                      onClick={handleBulkResumeDownload}
+                      disabled={bulkDownloadInProgress}
+                      className="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium text-sm hover:bg-blue-50 transition-all duration-200 disabled:opacity-50 flex items-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {bulkDownloadInProgress ? (
+                        <>
+                          <FontAwesomeIcon icon={faSpinner} spin className="w-4 h-4" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <FontAwesomeIcon icon={faDownload} className="w-4 h-4" />
+                          Download {selectedCandidates.size} Resume{selectedCandidates.size !== 1 ? 's' : ''}
+                        </>
+                      )}
+                    </motion.button>
+                    <motion.button
+                      onClick={clearAllSelections}
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      title="Clear all selections"
+                    >
+                      <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                      Clear
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           <div className="overflow-x-auto rounded-lg shadow-lg">
             <table className="w-full min-w-max">
               <thead className="bg-primary-gradient sticky top-0">
                 <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:px-6 md:py-4 md:text-sm w-12">
+                    {/* 🔥 NEW: Select All checkbox */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500 bg-white"
+                        checked={isAllCandidatesSelected}
+                        onChange={(e) => handleSelectAllCandidates(e.target.checked)}
+                        title="Select all candidates"
+                        aria-label="Select all candidates for bulk download"
+                      />
+                      {selectedCandidates.size > 0 && (
+                        <motion.div
+                          className="flex items-center gap-2 ml-2"
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                        >
+                          <span className="text-xs font-medium text-white bg-white/20 px-2 py-1 rounded">
+                            {selectedCandidates.size}
+                          </span>
+                          <button
+                            onClick={handleBulkResumeDownload}
+                            disabled={bulkDownloadInProgress}
+                            className="text-white hover:text-yellow-200 transition-colors duration-200 disabled:opacity-50"
+                            title={`Download ${selectedCandidates.size} resumes`}
+                            aria-label={`Download ${selectedCandidates.size} selected resumes`}
+                          >
+                            {bulkDownloadInProgress ? (
+                              <FontAwesomeIcon icon={faSpinner} spin className="h-4 w-4" />
+                            ) : (
+                              <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+                            )}
+                          </button>
+                          <button
+                            onClick={clearAllSelections}
+                            className="text-white hover:text-red-200 transition-colors duration-200"
+                            title="Clear all selections"
+                            aria-label="Clear all selections"
+                          >
+                            <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                          </button>
+                        </motion.div>
+                      )}
+                    </div>
+                  </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:px-6 md:py-4 md:text-sm">Rank</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:px-6 md:py-4 md:text-sm">Candidate</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:px-6 md:py-4 md:text-sm">Job Title</th>
@@ -734,17 +999,43 @@ function ResponseTable({ data, duplicateCount }) {
                 {filteredMembers.map((result, index) => {
                   const resumeData = result.matchingResult || result;
                   const analysis = result.Analysis || {};
+                  // Debug logging - uncomment to see what's happening
+                  // console.log('Rendering result:', { 
+                  //   index, 
+                  //   resultId: result._id, 
+                  //   hasAnalysis: !!result.Analysis, 
+                  //   analysisKeys: Object.keys(result.Analysis || {}), 
+                  //   analysisSummary: analysis["Analysis Summary"] 
+                  // });
                   const testScore = result.testScore || {};
                   const assessmentSession = result.assessmentSession || {};
+                  const dropdownKey = result._id || result.resumeId || result.Id || index;
                   return (
                     <React.Fragment key={index}>
                       <motion.tr 
-                        className={`hover:bg-gray-50 transition-all duration-200 ${expandedRow === index ? "bg-blue-50" : ""}`}
+                        className={`hover:bg-gray-50 transition-all duration-200 ${
+                          expandedRow === index ? "bg-blue-50" : ""
+                        } ${
+                          selectedCandidates.has(index) ? "bg-blue-50 border-l-4 border-blue-500 shadow-sm" : ""
+                        }`}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3, delay: index * 0.05 }}
                         whileHover={{ y: -1 }}
                       >
+                        <td className="px-4 py-3 whitespace-nowrap md:px-6 md:py-4">
+                          {/* 🔥 NEW: Individual selection checkbox */}
+                          <div className="flex items-center justify-center">
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+                              checked={selectedCandidates.has(index)}
+                              onChange={(e) => handleCandidateSelection(index, e.target.checked)}
+                              title={`Select ${resumeData.name || 'candidate'} for bulk download`}
+                              aria-label={`Select ${resumeData.name || 'candidate'} for bulk download`}
+                            />
+                          </div>
+                        </td>
                         <td className="px-4 py-3 whitespace-nowrap md:px-6 md:py-4">
                           <div className="flex items-center gap-2">
                             <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary-100 text-primary-800 font-semibold text-sm">
@@ -797,148 +1088,137 @@ function ResponseTable({ data, duplicateCount }) {
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap md:px-6 md:py-4">
                           <div className="flex space-x-2">
-                            <div className="relative" ref={el => resumeDropdownRefs.current[result._id || result.Id] = el}>
+                            {/* Resume Dropdown Column */}
+                            <div className="candidate-table-dropdown" ref={el => resumeDropdownRefs.current[dropdownKey] = el}>
                               <button
-                                id={`resume-dropdown-${result._id || result.Id}`}
-                                className="btn-modern bg-indigo-100 hover:bg-indigo-200 text-indigo-800 border-indigo-200 p-2"
-                                aria-label="Resume actions"
-                                onClick={(e) => {
+                                type="button"
+                                className="btn-modern bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-200 p-2"
+                                onClick={e => {
                                   e.stopPropagation();
-                                  setResumeDropdownOpen(prev => ({
-                                    ...prev,
-                                    [result._id || result.Id]: !prev[result._id || result.Id]
-                                  }));
-                                }}
-                              >
-                                <FontAwesomeIcon icon={faFileAlt} className="h-4 w-4" />
+                                  console.log('Dropdown trigger for candidate:', { dropdownKey, result });
+                                  setOpenResumeDropdown(prev => prev === dropdownKey ? null : dropdownKey);
+                                }}>
+                                <FontAwesomeIcon icon={faFileAlt} />
                               </button>
-                              {resumeDropdownOpen[result._id || result.Id] && (
-                                <div className="response-table-dropdown-menu bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                              {openResumeDropdown === dropdownKey && (
+                                <div className="candidate-table-dropdown-menu bg-white rounded-md shadow-lg border border-gray-200 z-50"
+                                  onClick={e => e.stopPropagation()}
+                                >
                                   <button
-                                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                    onClick={async (e) => {
-                                      e.preventDefault();
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={async e => {
                                       e.stopPropagation();
                                       const url = await handleResumeLink(result.resumeId?._id || result.resumeId || result.Id);
-                                      if (url && url !== "#") {
-                                        window.open(url, "_blank");
-                                      }
-                                      setResumeDropdownOpen(prev => ({
-                                        ...prev,
-                                        [result._id || result.Id]: false
-                                      }));
-                                    }}
-                                    aria-label="View resume"
-                                  >
-                                    <FontAwesomeIcon icon={faEye} className="mr-2 h-4 w-4 text-indigo-600" />
+                                      console.log('Resume URL for dropdown:', url, result);
+                                      if (url && url !== "#") window.open(url, '_blank');
+                                      setOpenResumeDropdown(null);
+                                    }}>
+                                    <FontAwesomeIcon icon={faEye} className="mr-2" />
                                     View Resume
                                   </button>
                                   <button
-                                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                    onClick={async (e) => {
-                                      e.preventDefault();
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={async e => {
                                       e.stopPropagation();
                                       try {
-                                        const response = await axiosInstance.get(
-                                          `/api/resumes/${result.resumeId?._id || result.resumeId || result.Id}?download=true`
-                                        );
-                                        if (response.data?.url) {
-                                          window.location.href = response.data.url;
-                                        }
-                                      } catch (error) {
-                                        console.error("Download failed:", error);
-                                        toast.error("Failed to initiate download");
-                                      }
-                                      setResumeDropdownOpen(prev => ({
-                                        ...prev,
-                                        [result._id || result.Id]: false
-                                      }));
-                                    }}
-                                    aria-label="Download resume"
-                                  >
-                                    <FontAwesomeIcon icon={faDownload} className="mr-2 h-4 w-4 text-green-600" />
+                                        const response = await axiosInstance.get(`/api/resumes/${result.resumeId?._id || result.resumeId || result.Id}?download=true`);
+                                        if (response.data?.url) window.location.href = response.data.url;
+                                      } catch (err) { toast.error('Failed to download resume'); }
+                                      setOpenResumeDropdown(null);
+                                    }}>
+                                    <FontAwesomeIcon icon={faDownload} className="mr-2" />
                                     Download Resume
+                                  </button>
+                                  <button
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={async e => {
+                                      e.stopPropagation();
+                                      try {
+                                        const response = await axiosInstance.get(`/api/job-descriptions/${result.jobDescriptionId?._id || result.jobDescriptionId || result.Id}`);
+                                        if (response.data?.url) {
+                                          console.log('JD URL:', response.data.url, result);
+                                          window.open(response.data.url, '_blank');
+                                        }
+                                      } catch (err) { toast.error('Failed to view job description'); }
+                                      setOpenResumeDropdown(null);
+                                    }}>
+                                    <FontAwesomeIcon icon={faFileAlt} className="mr-2" />
+                                    View Job Description
                                   </button>
                                 </div>
                               )}
                             </div>
-                            <div className="relative" ref={el => interviewDropdownRefs.current[result._id || result.Id] = el}>
+                            {/* Interview Dropdown Column */}
+                            <div className="candidate-table-dropdown" ref={el => interviewDropdownRefs.current[dropdownKey] = el}>
                               <button
-                                className="btn-modern bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-200 flex items-center gap-1 px-2 py-2 md:gap-2 md:px-3 md:py-2"
-                                aria-label="Interview scheduling options"
-                                onClick={(e) => {
+                                type="button"
+                                className="btn-modern bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-200 flex items-center gap-1 px-2 py-2"
+                                onClick={e => {
                                   e.stopPropagation();
-                                  setInterviewDropdownOpen(prev => ({
-                                    ...prev,
-                                    [result._id || result.Id]: !prev[result._id || result.Id]
-                                  }));
-                                }}
-                              >
-                                <FontAwesomeIcon icon={faCalendarAlt} className="h-4 w-4 text-xs md:text-sm" />
-                                <span className="text-xs font-medium md:text-sm hidden md:inline">Interview</span>
+                                  setOpenInterviewDropdown(prev => prev === dropdownKey ? null : dropdownKey);
+                                }}>
+                                <FontAwesomeIcon icon={faCalendarAlt} className="text-xs md:text-sm" />
+                                <span className="text-xs font-medium md:text-sm hidden md:inline">Schedule</span>
                               </button>
-                              {interviewDropdownOpen[result._id || result.Id] && (
-                                <div className="response-table-dropdown-menu bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                              {openInterviewDropdown === dropdownKey && (
+                                <div className="candidate-table-dropdown-menu bg-white rounded-md shadow-lg border border-gray-200 z-50"
+                                  onClick={e => e.stopPropagation()}
+                                >
                                   <a
-                                    href={`https://calendar.google.com/calendar/render?action=TEMPLATE&add=${encodeURIComponent(
-                                      resumeData.email || ""
-                                    )}&text=${encodeURIComponent(`Interview - ${resumeData["Job Title"] || "Job Title"}`)}}`}
+                                    href={`https://calendar.google.com/calendar/render?action=TEMPLATE&add=${encodeURIComponent(resumeData.email || "")}&text=${encodeURIComponent(`Interview - ${resumeData["Job Title"] || "Job Title"}`)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setInterviewDropdownOpen(prev => ({
-                                        ...prev,
-                                        [result._id || result.Id]: false
-                                      }));
-                                    }}
-                                    aria-label="Schedule with Google Calendar"
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={e => { e.stopPropagation(); setOpenInterviewDropdown(null); }}
                                   >
-                                    <FontAwesomeIcon icon={faGoogle} className="mr-2 h-4 w-4 text-red-500" />
-                                    Google Calendar
+                                    <FontAwesomeIcon icon={faGoogle} className="mr-2" />Google Calendar
                                   </a>
                                   <a
-                                    href={`https://outlook.office.com/calendar/0/deeplink/compose?to=${encodeURIComponent(
-                                      resumeData.email || ""
-                                    )}&subject=${encodeURIComponent(`Interview - ${resumeData["Job Title"] || "Job Title"}`)}`}
+                                    href={`https://outlook.office.com/calendar/0/deeplink/compose?to=${encodeURIComponent(resumeData.email || "")}&subject=${encodeURIComponent(`Interview - ${resumeData["Job Title"] || "Job Title"}`)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setInterviewDropdownOpen(prev => ({
-                                        ...prev,
-                                        [result._id || result.Id]: false
-                                      }));
-                                    }}
-                                    aria-label="Schedule with Microsoft Teams"
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={e => { e.stopPropagation(); setOpenInterviewDropdown(null); }}
                                   >
-                                    <FontAwesomeIcon icon={faMicrosoft} className="mr-2 h-4 w-4 text-blue-500" />
-                                    Microsoft Teams
+                                    <FontAwesomeIcon icon={faMicrosoft} className="mr-2" />Microsoft Teams
                                   </a>
                                   <a
-                                    href={`https://zoom.us/schedule?email=${encodeURIComponent(
-                                      resumeData.email || ""
-                                    )}&topic=${encodeURIComponent(`Interview - ${resumeData["Job Title"] || "Job Title"}`)}`}
+                                    href={`https://zoom.us/schedule?email=${encodeURIComponent(resumeData.email || "")}&topic=${encodeURIComponent(`Interview - ${resumeData["Job Title"] || "Job Title"}`)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setInterviewDropdownOpen(prev => ({
-                                        ...prev,
-                                        [result._id || result.Id]: false
-                                      }));
-                                    }}
-                                    aria-label="Schedule with Zoom"
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={e => { e.stopPropagation(); setOpenInterviewDropdown(null); }}
                                   >
-                                    <FontAwesomeIcon icon={faVideo} className="mr-2 h-4 w-4 text-blue-400" />
-                                    Zoom
+                                    <FontAwesomeIcon icon={faVideo} className="mr-2" />Zoom
                                   </a>
                                 </div>
                               )}
                             </div>
+                            {/* Proceed to Interview Button - Only show if assessment is completed */}
+                            {assessmentSession._id && assessmentSession.status === 'completed' && (
+                              <motion.button
+                                className="btn-modern bg-green-100 hover:bg-green-200 text-green-800 border-green-200 flex items-center gap-1 px-2 py-2 md:gap-2 md:px-3 md:py-2"
+                                onClick={() => {
+                                  // Use the assessment session ID as both candidate and session ID for now
+                                  // This will be updated once we have proper candidate IDs
+                                  console.log('Navigating to interview with:', {
+                                    candidateId: assessmentSession._id,
+                                    assessmentSessionId: assessmentSession._id,
+                                    resumeData: resumeData,
+                                    result: result
+                                  });
+                                  navigate(`/dashboard/candidate-details/${assessmentSession._id}/${assessmentSession._id}`);
+                                }}
+                                title="Proceed to Interview"
+                                aria-label="Proceed to Interview"
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                              >
+                                <FontAwesomeIcon icon={faHandshake} className="h-4 w-4" />
+                                <span className="text-xs font-medium md:text-sm hidden md:inline">Interview</span>
+                              </motion.button>
+                            )}
+                            
                             <motion.button
                               className="btn-modern bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200 flex items-center gap-1 px-2 py-2 md:gap-2 md:px-3 md:py-2"
                               onClick={() => toggleExpandRow(index)}
@@ -960,283 +1240,435 @@ function ResponseTable({ data, duplicateCount }) {
     exit={{ opacity: 0, height: 0 }}
     transition={{ duration: 0.3 }}
   >
-    <td colSpan="6" className="px-0 py-0">
+    <td colSpan="7" className="px-0 py-0">
       <motion.div 
-        className="bg-gradient-to-br from-blue-50 to-indigo-50 p-2 rounded-lg border border-blue-100"
+        className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100 shadow-sm"
         initial={{ y: -20 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.3, delay: 0.1 }}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
-          {/* Contact Information - Compact Design */}
-          <div className="bg-white p-2 rounded-md border border-gray-200">
-            <h6 className="text-md font-semibold text-gray-900 border-b border-gray-200 pb-1 mb-2">
-              Contact Information
-            </h6>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-700 text-xs min-w-[80px]">Mobile:</span>
-                <span className="text-gray-900 text-xs">{resumeData.mobile_number || "N/A"}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-700 text-xs min-w-[80px]">Email:</span>
-                {resumeData.email ? (
-                  <span className="badge badge-primary text-xs px-2 py-0.5">
-                    {resumeData.email}
-                  </span>
-                ) : (
-                  <span className="text-gray-500 text-xs">N/A</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-700 text-xs min-w-[80px]">Consent:</span>
-                {result.candidateConsent?.allowedToShare ? (
-                  <span className="badge badge-success text-xs px-2 py-0.5">
-                    Shared
-                  </span>
-                ) : (
-                  <span className="badge badge-warning text-xs px-2 py-0.5">
-                    Not Shared
-                  </span>
-                )}
-              </div>
+        <div className="flex flex-col gap-3 max-w-4xl mx-auto">
+          {/* Contact Information Card */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-3 py-2">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <FontAwesomeIcon icon={faUserTie} />
+                Contact Information
+              </h3>
             </div>
-          </div>
-          
-          {/* Professional Details - Compact Design */}
-          <div className="bg-white p-2 rounded-md border border-gray-200">
-            <h6 className="text-md font-semibold text-gray-900 border-b border-gray-200 pb-1 mb-2">
-              Professional Details
-            </h6>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-700 text-xs min-w-[80px]">Designation:</span>
-                <span className="text-gray-900 text-xs">
-                  {(Array.isArray(resumeData.designation) 
-                    ? resumeData.designation.join(", ") 
-                    : resumeData.designation) || "N/A"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-700 text-xs min-w-[80px]">Degree:</span>
-                <span className="text-gray-900 text-xs">
-                  {(Array.isArray(resumeData.degree) 
-                    ? resumeData.degree.join(", ") 
-                    : resumeData.degree) || "N/A"}
-                </span>
-              </div>
-              <div className="space-y-1">
-                <span className="font-medium text-gray-700 text-xs">Certifications:</span>
-                <div className="ml-0 text-xs">
-                  {renderListWithExpand(resumeData.certifications || [], index, "certifications", 2)}
+            <div className="p-3">
+              <div className="space-y-3">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faMobile} className="text-blue-600 text-xs" />
+                  </div>
+                  <div className="ml-2">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Mobile</p>
+                    <p className="text-xs font-medium text-gray-900 mt-1">{resumeData.mobile_number || "N/A"}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faEnvelope} className="text-blue-600 text-xs" />
+                  </div>
+                  <div className="ml-2">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Email</p>
+                    <p className="text-xs font-medium text-gray-900 mt-1 break-all">{resumeData.email || "N/A"}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faShieldAlt} className="text-blue-600 text-xs" />
+                  </div>
+                  <div className="ml-2">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Consent Status</p>
+                    <div className="mt-1">
+                      {result.candidateConsent?.allowedToShare ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
+                          Shared
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
+                          Not Shared
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
           
-          {/* Skills - Compact Design */}
-          <div className="bg-white p-2 rounded-md border border-gray-200">
-            <h6 className="text-md font-semibold text-gray-900 border-b border-gray-200 pb-1 mb-2">
-              Skills
-            </h6>
-            <div className="flex flex-wrap gap-1">
-              {resumeData.skills?.length ? (
-                resumeData.skills.map((skill, i) => (
-                  <span key={i} className="badge badge-info text-xs px-2 py-0.5">
-                    {skill}
-                  </span>
-                ))
+          {/* Professional Details Card */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-3 py-2">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <FontAwesomeIcon icon={faBriefcase} />
+                Professional Details
+              </h3>
+            </div>
+            <div className="p-3">
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Designation</p>
+                  <p className="text-xs font-medium text-gray-900 mt-1">
+                    {(Array.isArray(resumeData.designation) 
+                      ? resumeData.designation.join(", ") 
+                      : resumeData.designation) || "N/A"}
+                  </p>
+                </div>
+                
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Degree</p>
+                  <p className="text-xs font-medium text-gray-900 mt-1">
+                    {(Array.isArray(resumeData.degree) 
+                      ? resumeData.degree.join(", ") 
+                      : resumeData.degree) || "N/A"}
+                  </p>
+                </div>
+                
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Certifications</p>
+                  <div className="mt-1">
+                    {resumeData.certifications?.length ? (
+                      <div className="flex flex-wrap gap-1">
+                        {resumeData.certifications.map((cert, i) => (
+                          <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                            {cert}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500">No certifications listed</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Skills Card */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+            <div className="bg-gradient-to-r from-purple-500 to-pink-600 px-3 py-2">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <FontAwesomeIcon icon={faTools} />
+                Skills
+              </h3>
+            </div>
+            <div className="p-3">
+              <div className="flex flex-wrap gap-1">
+                {resumeData.skills?.length ? (
+                  resumeData.skills.map((skill, i) => (
+                    <span key={i} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border border-purple-200">
+                      {skill}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-xs text-gray-500">No skills listed</p>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Previous Companies Card */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+            <div className="bg-gradient-to-r from-green-500 to-teal-600 px-3 py-2">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <FontAwesomeIcon icon={faBuilding} />
+                Previous Companies
+              </h3>
+            </div>
+            <div className="p-3">
+              {resumeData.company_names?.length ? (
+                <div className="flex flex-wrap gap-1">
+                  {resumeData.company_names.map((company, i) => (
+                    <span key={i} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-green-100 to-teal-100 text-green-800 border border-green-200">
+                      {company}
+                    </span>
+                  ))}
+                </div>
               ) : (
-                <span className="text-gray-500 text-xs">No skills available</span>
+                <p className="text-xs text-gray-500">No previous companies listed</p>
               )}
             </div>
           </div>
           
-          {/* Previous Companies - Compact Design */}
-          <div className="bg-white p-2 rounded-md border border-gray-200">
-            <h6 className="text-md font-semibold text-gray-900 border-b border-gray-200 pb-1 mb-2">
-              Previous Companies
-            </h6>
-            <div className="text-xs compact-list">
-              {renderListWithExpand(resumeData.company_names || [], index, "company_names", 3)}
+          {/* Experience Card */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-3 py-2">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <FontAwesomeIcon icon={faGraduationCap} />
+                Work Experience
+              </h3>
+            </div>
+            <div className="p-3">
+              {resumeData.total_experience?.length ? (
+                <div className="space-y-3">
+                  {resumeData.total_experience.map((exp, i) => (
+                    <div key={i} className="border border-gray-200 rounded-md p-3 hover:bg-gray-50 transition-colors">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="text-xs font-semibold text-gray-900">{exp.role || "N/A"}</h4>
+                          <p className="text-xs text-gray-600 mt-1">{exp.company || "N/A"}</p>
+                        </div>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                          {exp.duration || "N/A"}
+                        </span>
+                      </div>
+                      
+                      {exp.responsibilities?.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Responsibilities</p>
+                          <ul className="mt-1 space-y-1">
+                            {exp.responsibilities.slice(0, 3).map((resp, j) => (
+                              <li key={j} className="flex items-start">
+                                <FontAwesomeIcon icon={faCircle} className="text-gray-400 text-xs mt-1 mr-1 flex-shrink-0" />
+                                <span className="text-xs text-gray-700">{resp}</span>
+                              </li>
+                            ))}
+                            {exp.responsibilities.length > 3 && (
+                              <li 
+                                className="text-xs text-blue-600 font-medium cursor-pointer hover:text-blue-800"
+                                onClick={() => toggleExpand(`${i}-${index}`, 'responsibilities')}
+                              >
+                                {expandedLists[`${i}-${index}-responsibilities`] 
+                                  ? "Show Less" 
+                                  : `+ ${exp.responsibilities.length - 3} more responsibilities`}
+                              </li>
+                            )}
+                          </ul>
+                          {expandedLists[`${i}-${index}-responsibilities`] && (
+                            <ul className="mt-1 space-y-1">
+                              {exp.responsibilities.slice(3).map((resp, j) => (
+                                <li key={`${j}-expanded`} className="flex items-start">
+                                  <FontAwesomeIcon icon={faCircle} className="text-gray-400 text-xs mt-1 mr-1 flex-shrink-0" />
+                                  <span className="text-xs text-gray-700">{resp}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500">No work experience listed</p>
+              )}
             </div>
           </div>
           
-          {/* Experience - Compact Design */}
-          <div className="mt-2 bg-white p-2 rounded-md border border-gray-200">
-            <h6 className="text-md font-semibold text-gray-900 border-b border-gray-200 pb-1 mb-2">
-              Experience
-            </h6>
-            <div className="space-y-2">
-            {resumeData.total_experience?.length ? (
-  resumeData.total_experience.map((exp, i) => (
-    <div key={i} className="experience-card p-2 rounded border border-gray-200">
-      <div className="experience-grid gap-2">
-        <div>
-          <div className="experience-detail">
-            <span className="experience-label text-xs">Role:</span>
-            <span className="experience-value text-xs">{exp.role || "N/A"}</span>
-          </div>
-          <div className="experience-detail">
-            <span className="experience-label text-xs">Company:</span>
-            <span className="experience-value text-xs">{exp.company || "N/A"}</span>
-          </div>
-          <div className="experience-detail">
-            <span className="experience-label text-xs">Duration:</span>
-            <span className="experience-value text-xs">{exp.duration || "N/A"}</span>
-          </div>
-        </div>
-        <div>
-          <div className="space-y-1">
-            <span className="experience-label text-xs">Responsibilities:</span>
-            <div className="ml-0 compact-list text-xs">
-              {renderListWithExpand(exp.responsibilities || [], index, `responsibilities-${i}`, 2)}
+          {/* Analysis Card */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+            <div className="bg-gradient-to-r from-red-500 to-rose-600 px-3 py-2">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <FontAwesomeIcon icon={faChartLine} />
+                Analysis
+              </h3>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  ))
-) : (
-  <span className="text-gray-500 text-xs">No experience available</span>
-)}
-            </div>
-          </div>
-          
-          {/* Analysis - Compact Design */}
-          <div className="mt-2 bg-white p-2 rounded-md border border-gray-200">
-            <h6 className="text-md font-semibold text-gray-900 border-b border-gray-200 pb-1 mb-2">
-              Analysis
-            </h6>
-            <div className="analysis-grid gap-1.5">
-              {/* Skills Analysis */}
-              <div className="space-y-2">
-                <div className="space-y-1">
-                  <div>
-                    <span className="skill-analysis-title text-xs">Matched Skills:</span>
-                    <div className="ml-0 compact-list text-xs">
-                      {renderListWithExpand(analysis["Matched Skills"] || [], index, "matchedSkills", 3)}
-                    </div>
+            <div className="p-3">
+              <div className="space-y-4">
+                {/* Matching Score */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Matching Score</p>
+                    <span className="text-xs font-bold text-gray-900">{analysis["Matching Score"] || "N/A"}</span>
                   </div>
-                  <div>
-                    <span className="skill-analysis-title text-xs">Unmatched Skills:</span>
-                    <div className="ml-0 compact-list text-xs">
-                      {renderListWithExpand(analysis["Unmatched Skills"] || [], index, "unmatchedSkills", 3)}
-                    </div>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div 
+                      className="bg-gradient-to-r from-red-500 to-rose-600 h-1.5 rounded-full" 
+                      style={{ width: `${analysis["Matching Score"] || 0}%` }}
+                    ></div>
                   </div>
-                  <div>
-                    <span className="skill-analysis-title text-xs">Strengths:</span>
-                    <div className="ml-0 compact-list text-xs">
-                      {renderListWithExpand(analysis.Strengths || [], index, "strengths", 3)}
+                </div>
+                
+                {/* Skills Breakdown */}
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Skills Breakdown</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-green-50 rounded-md p-2 border border-green-200">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium text-green-800">Matched</span>
+                        <span className="text-xs font-bold text-green-900">{analysis["Matched Skills Percentage"] || 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
+                        <div 
+                          className="bg-green-500 h-1 rounded-full" 
+                          style={{ width: `${analysis["Matched Skills Percentage"] || 0}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-rose-50 rounded-md p-2 border border-rose-200">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium text-rose-800">Unmatched</span>
+                        <span className="text-xs font-bold text-rose-900">{analysis["Unmatched Skills Percentage"] || 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
+                        <div 
+                          className="bg-rose-500 h-1 rounded-full" 
+                          style={{ width: `${analysis["Unmatched Skills Percentage"] || 0}%` }}
+                        ></div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            
-              {/* Scores and Metrics */}
-              <div className="space-y-2">
-                <div className="bg-gradient-to-r from-green-50 to-blue-50 p-2 rounded border border-gray-200">
+                
+                {/* Matched Skills */}
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Matched Skills</p>
+                  <div className="flex flex-wrap gap-1">
+                    {analysis["Matched Skills"]?.length ? (
+                      analysis["Matched Skills"].map((skill, i) => (
+                        <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {skill}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-xs text-gray-500">No matched skills</p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Unmatched Skills */}
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Unmatched Skills</p>
+                  <div className="flex flex-wrap gap-1">
+                    {analysis["Unmatched Skills"]?.length ? (
+                      analysis["Unmatched Skills"].map((skill, i) => (
+                        <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-800">
+                          {skill}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-xs text-gray-500">No unmatched skills</p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Strengths */}
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Strengths</p>
+                  <div className="flex flex-wrap gap-1">
+                    {analysis.Strengths?.length ? (
+                      analysis.Strengths.map((strength, i) => (
+                        <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {strength}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-xs text-gray-500">No strengths identified</p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Recommendations */}
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Recommendations</p>
                   <div className="space-y-1">
-                    <div className="analysis-metric">
-                      <span className="analysis-label text-xs">Matching Score:</span>
-                      <span className="analysis-value text-xs">{analysis["Matching Score"] || "N/A"}</span>
-                    </div>
-                    <div className="analysis-metric">
-                      <span className="analysis-label text-xs">Matched Skills %:</span>
-                      <span className="analysis-value analysis-score-positive text-xs">{analysis["Matched Skills Percentage"] || 0}%</span>
-                    </div>
-                    <div className="analysis-metric">
-                      <span className="analysis-label text-xs">Unmatched Skills %:</span>
-                      <span className="analysis-value analysis-score-negative text-xs">{analysis["Unmatched Skills Percentage"] || 0}%</span>
-                    </div>
+                    {analysis.Recommendations?.length ? (
+                      analysis.Recommendations.map((rec, i) => (
+                        <div key={i} className="flex items-start p-2 bg-blue-50 rounded-md border border-blue-200">
+                          <FontAwesomeIcon icon={faLightbulb} className="text-blue-500 text-xs mt-0.5 mr-1 flex-shrink-0" />
+                          <span className="text-xs text-gray-700">{rec}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-gray-500">No recommendations available</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Experience Metrics Card */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+            <div className="bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-2">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <FontAwesomeIcon icon={faUserClock} />
+                Experience Metrics
+              </h3>
+            </div>
+            <div className="p-3">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center pb-2 border-b border-gray-200">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">Required Industrial Experience</p>
+                    <p className="text-xs font-medium text-gray-900 mt-1">{analysis["Required Industrial Experience"] || "N/A"}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-medium text-gray-500">Candidate's Experience</p>
+                    <p className="text-xs font-medium text-gray-900 mt-1">{analysis["Candidate Industrial Experience"] || "N/A"}</p>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center pb-2 border-b border-gray-200">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">Required Domain Experience</p>
+                    <p className="text-xs font-medium text-gray-900 mt-1">{analysis["Required Domain Experience"] || "N/A"}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-medium text-gray-500">Candidate's Experience</p>
+                    <p className="text-xs font-medium text-gray-900 mt-1">{analysis["Candidate Domain Experience"] || "N/A"}</p>
                   </div>
                 </div>
                 
                 <div>
-                  <span className="skill-analysis-title text-xs">Recommendations:</span>
-                  <div className="ml-0 compact-list text-xs">
-                    {renderListWithExpand(analysis.Recommendations || [], index, "recommendations", 3)}
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Compliance Status</p>
+                  <div>
+                    {analysis["Experience Threshold Compliance"] ? (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        analysis["Experience Threshold Compliance"].includes("meet") 
+                          ? "bg-green-100 text-green-800" 
+                          : "bg-amber-100 text-amber-800"
+                      }`}>
+                        <FontAwesomeIcon 
+                          icon={analysis["Experience Threshold Compliance"].includes("meet") ? faCheck : faExclamationTriangle} 
+                          className="mr-1" 
+                        />
+                        {analysis["Experience Threshold Compliance"]}
+                      </span>
+                    ) : (
+                      <p className="text-xs text-gray-500">N/A</p>
+                    )}
                   </div>
                 </div>
                 
-                <div className="space-y-1 text-xs">
-                  <div className="analysis-metric">
-                    <span className="analysis-label text-xs">Required Industrial Experience:</span>
-                    <span className="analysis-value text-xs">{analysis["Required Industrial Experience"] || "N/A"}</span>
-                  </div>
-                  <div className="analysis-metric">
-                    <span className="analysis-label text-xs">Candidate Industrial Experience:</span>
-                    <span className="analysis-value text-xs">{analysis["Candidate Industrial Experience"] || "N/A"}</span>
-                  </div>
-                  <div className="analysis-metric">
-                    <span className="analysis-label text-xs">Required Domain Experience:</span>
-                    <span className="analysis-value text-xs">{analysis["Required Domain Experience"] || "N/A"}</span>
-                  </div>
-                  <div className="analysis-metric">
-                    <span className="analysis-label text-xs">Candidate Domain Experience:</span>
-                    <span className="analysis-value text-xs">{analysis["Candidate Domain Experience"] || "N/A"}</span>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Recent Experience Relevance</p>
+                  <div>
+                    {analysis["Recent Experience Relevance"] ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800">
+                        {analysis["Recent Experience Relevance"]}
+                      </span>
+                    ) : (
+                      <p className="text-xs text-gray-500">N/A</p>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           </div>
           
-          {/* Assessment Results - Compact Design */}
-          {assessmentSession._id && (
-            <div className="mt-2 bg-white p-2 rounded-md border border-gray-200">
-              <div className="flex items-center justify-between mb-2">
-                <h6 className="text-md font-semibold text-gray-900">
-                  Assessment Results
-                </h6>
-                <span className="badge badge-info text-xs px-2 py-0.5">
-                  Scores
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div className="space-y-1.5">
-                  <div className="flex justify-between">
-                    <span className="text-gray-700 text-xs">MCQ Score:</span>
-                    <span className="text-gray-900 text-xs">{testScore.score ? `${testScore.score.toFixed(2)}/100` : "N/A"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-700 text-xs">Audio Score:</span>
-                    <span className="text-gray-900 text-xs">{testScore.audioScore ? `${testScore.audioScore.toFixed(2)}/100` : "N/A"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-700 text-xs">Text Score:</span>
-                    <span className="text-gray-900 text-xs">{testScore.textScore ? `${testScore.textScore.toFixed(2)}/100` : "N/A"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-700 text-xs">Video Score:</span>
-                    <span className="text-gray-900 text-xs">{testScore.videoScore ? `${testScore.videoScore.toFixed(2)}/100` : "N/A"}</span>
-                  </div>
-                  <div className="flex justify-between font-semibold mt-1 pt-1 border-t">
-                    <span className="text-gray-700 text-xs">Combined Score:</span>
-                    <span className="text-gray-900 text-xs">{testScore.combinedScore ? `${testScore.combinedScore.toFixed(2)}/100` : "N/A"}</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {assessmentSession.reportStatus === "completed" && (
-                    <button
-                      className="recording-btn bg-blue-500 hover:bg-blue-600 text-white text-xs py-1"
-                      onClick={async () => {
-                        const url = await handleReportLink(assessmentSession._id);
-                        if (url && url !== "#") {
-                          window.open(url, "_blank");
-                        }
-                      }}
-                      aria-label="View assessment report"
-                    >
-                      <FontAwesomeIcon icon={faFilePdf} size="xs" className="mr-1" />
-                      View Report
-                    </button>
-                  )}
-                  {/* Add media actions */}
-                  {renderMediaActions(assessmentSession, index)}
-                </div>
-              </div>
+          {/* Analysis Summary Card */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+            <div className="bg-gradient-to-r from-gray-600 to-gray-800 px-3 py-2">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <FontAwesomeIcon icon={faClipboardList} />
+                Analysis Summary
+              </h3>
             </div>
-          )}
+            <div className="p-3">
+              <p className="text-xs text-gray-700">
+                {analysis["Analysis Summary"] || "No analysis summary available"}
+              </p>
+            </div>
+          </div>
         </div>
       </motion.div>
     </td>
@@ -1249,6 +1681,72 @@ function ResponseTable({ data, duplicateCount }) {
             </table>
           </div>
         </motion.div>
+        
+        {/* 🔥 NEW: Floating Action Button for Bulk Download */}
+        <AnimatePresence>
+          {selectedCandidates.size > 0 && (
+            <motion.div
+              className="fixed bottom-6 right-6 z-50"
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            >
+              <div className="bg-white rounded-lg shadow-2xl border border-gray-200 p-4 min-w-[280px]">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 bg-blue-gradient rounded-full flex items-center justify-center">
+                      <FontAwesomeIcon icon={faDownload} className="text-white text-sm" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 text-sm">
+                        Bulk Download Ready
+                      </h4>
+                      <p className="text-xs text-gray-500">
+                        {selectedCandidates.size} candidates selected
+                      </p>
+                    </div>
+                  </div>
+                  <motion.button
+                    onClick={clearAllSelections}
+                    className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                  </motion.button>
+                </div>
+                
+                <div className="space-y-2">
+                  <motion.button
+                    onClick={handleBulkResumeDownload}
+                    disabled={bulkDownloadInProgress}
+                    className="w-full bg-blue-gradient text-white py-2.5 px-4 rounded-lg font-medium text-sm hover:shadow-lg transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {bulkDownloadInProgress ? (
+                      <>
+                        <FontAwesomeIcon icon={faSpinner} spin className="w-4 h-4" />
+                        Creating ZIP...
+                      </>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faDownload} className="w-4 h-4" />
+                        Download ZIP File
+                      </>
+                    )}
+                  </motion.button>
+                  
+                  <div className="text-xs text-gray-500 text-center">
+                    Download will include candidate names and matching scores
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
         <ToastContainer position="top-center" />
       </motion.div>
     </div>

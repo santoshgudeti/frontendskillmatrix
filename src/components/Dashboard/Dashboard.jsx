@@ -15,6 +15,10 @@ import ScheduledTestDetails from '../ScheduledTest/ScheduledTestDetails';
 import DashboardHome from './DashboardHome';
 import Reports from './Reports';
 import History from './History';
+import CandidateDetailsPage from './CandidateDetailsPage';
+import DocumentCollectionDashboard from './DocumentCollection/DocumentCollectionDashboard';
+import TemplateManagement from './Templates/TemplateManagement';
+
 // Import new components for candidate assessment workflow
 
 
@@ -141,6 +145,8 @@ function Dashboard({ onLogout }) {
               <Route path="scheduled-tests/:id/details" element={<ScheduledTestDetails />} />
 
               {/* Candidate Assessment & Interview Workflow Routes */}
+              <Route path="candidate-details/:candidateId/:assessmentSessionId" element={<CandidateDetailsPage />} />
+              <Route path="assessment-session/:id" element={<AssessmentSessionDetails />} />
 
 
               {/* Reports and History Routes */}
@@ -153,6 +159,12 @@ function Dashboard({ onLogout }) {
 
               {/* User Profile Route */}
               <Route path="user" element={<UserProfile />} />
+
+              {/* Add this new route for document collection dashboard */}
+              <Route path="document-collection" element={<DocumentCollectionDashboard />} />
+              
+              {/* Add this new route for template management */}
+              <Route path="templates" element={<TemplateManagement />} />
             </Routes>
           </div>
         </motion.main>

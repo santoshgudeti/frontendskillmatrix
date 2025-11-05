@@ -102,7 +102,6 @@ const DialogContent = React.forwardRef(({
     "2xl": `max-w-6xl`,
     full: `max-w-[95vw] max-h-[95vh]`
   }
-  
   if (!isOpen) return null
   
   return (
@@ -114,7 +113,7 @@ const DialogContent = React.forwardRef(({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className={`fixed inset-0 bg-black/50 backdrop-blur-sm`}
+            className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-10`}
             onClick={handleOverlayClick}
           />
           
@@ -126,7 +125,7 @@ const DialogContent = React.forwardRef(({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: `spring`, duration: 0.3 }}
             className={cn(
-              `relative w-full bg-white rounded-2xl shadow-2xl border border-gray-200`,
+              `relative z-50 w-full bg-white rounded-2xl shadow-2xl border border-gray-200`,
               sizeClasses[size],
               className
             )}

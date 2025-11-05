@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './CandidateTable.css';
 import { useMediaOperations } from "../../hooks/useMediaOperations";
 import {
@@ -11,7 +11,10 @@ import {
   faIdBadge, faCalendarAlt, faUsers,
   faSpinner, faCheckCircle, faExclamationTriangle,
   faTimes, faFilter, faSort, faDesktop, faPlayCircle,
-  faMicrophone,faChevronLeft,faChevronRight,faFilePdf
+  faMicrophone,faChevronLeft,faChevronRight,faFilePdf,
+  faRobot, faUserEdit, faInfoCircle, faCheck, faQuestionCircle, faList, faPaperPlane, 
+  faFileExcel, faUpload, faMobile, faEnvelope, faShieldAlt,
+  faChartLine, faLightbulb, faUserClock, faClipboardList, faCircle,faTools 
 } from "@fortawesome/free-solid-svg-icons";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -20,6 +23,818 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { io } from "socket.io-client";
 import { faGoogle, faMicrosoft } from '@fortawesome/free-brands-svg-icons';
 import { axiosInstance } from "../../axiosUtils";
+
+// Add this new component for the custom assessment modal
+const CustomAssessmentModal = ({ show, onClose, candidateData, onSubmit }) => {
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [assessmentType, setAssessmentType] = useState('ai'); // 'ai' or 'custom'
+  const [mcqQuestions, setMcqQuestions] = useState([
+    { question: '', options: ['', '', '', ''], correctAnswer: '' },
+    { question: '', options: ['', '', '', ''], correctAnswer: '' },
+    { question: '', options: ['', '', '', ''], correctAnswer: '' },
+    { question: '', options: ['', '', '', ''], correctAnswer: '' },
+    { question: '', options: ['', '', '', ''], correctAnswer: '' },
+    { question: '', options: ['', '', '', ''], correctAnswer: '' },
+    { question: '', options: ['', '', '', ''], correctAnswer: '' },
+    { question: '', options: ['', '', '', ''], correctAnswer: '' },
+    { question: '', options: ['', '', '', ''], correctAnswer: '' },
+    { question: '', options: ['', '', '', ''], correctAnswer: '' }
+  ]);
+  const [voiceQuestions, setVoiceQuestions] = useState(['', '', '', '', '']);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [excelFile, setExcelFile] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  if (!show) return null;
+
+  // Removed add/remove functions as we need exactly 10 MCQ questions
+
+  const updateMcqQuestion = (index, field, value) => {
+    const newQuestions = [...mcqQuestions];
+    if (field === 'options') {
+      newQuestions[index].options = value;
+    } else {
+      newQuestions[index][field] = value;
+    }
+    setMcqQuestions(newQuestions);
+  };
+
+  // Removed add/remove option functions as we need exactly 4 options per MCQ
+
+  const updateOption = (questionIndex, optionIndex, value) => {
+    const newQuestions = [...mcqQuestions];
+    newQuestions[questionIndex].options[optionIndex] = value;
+    setMcqQuestions(newQuestions);
+  };
+
+  // Removed add/remove functions as we need exactly 5 voice questions
+
+  const updateVoiceQuestion = (index, value) => {
+    const newQuestions = [...voiceQuestions];
+    newQuestions[index] = value;
+    setVoiceQuestions(newQuestions);
+  };
+
+  const validateCustomQuestions = () => {
+    // Validate exact number of MCQ questions (must be 10)
+    if (mcqQuestions.length !== 10) {
+      setError('Exactly 10 MCQ questions are required. Please add or remove questions to meet this requirement.');
+      return false;
+    }
+    
+    // Validate each MCQ question
+    for (let i = 0; i < mcqQuestions.length; i++) {
+      const q = mcqQuestions[i];
+      if (!q.question.trim()) {
+        setError(`MCQ Question ${i + 1}: Question text is required`);
+        return false;
+      }
+      
+      // Validate exactly 4 options
+      if (q.options.length !== 4) {
+        setError(`MCQ Question ${i + 1}: Exactly 4 options are required`);
+        return false;
+      }
+      
+      if (q.options.some(opt => !opt.trim())) {
+        setError(`MCQ Question ${i + 1}: All options must be filled`);
+        return false;
+      }
+      if (!q.correctAnswer.trim()) {
+        setError(`MCQ Question ${i + 1}: Correct answer is required`);
+        return false;
+      }
+      if (!q.options.includes(q.correctAnswer)) {
+        setError(`MCQ Question ${i + 1}: Correct answer must match one of the options`);
+        return false;
+      }
+    }
+
+    // Validate exact number of voice questions (must be 5)
+    if (voiceQuestions.length !== 5) {
+      setError('Exactly 5 voice questions are required. Please add or remove questions to meet this requirement.');
+      return false;
+    }
+
+    // Validate voice questions
+    for (let i = 0; i < voiceQuestions.length; i++) {
+      if (!voiceQuestions[i].trim()) {
+        setError(`Voice Question ${i + 1}: Question text is required`);
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    if (assessmentType === 'ai') {
+      // For AI assessment, just call the existing sendTestLink function
+      onSubmit('ai');
+      return;
+    }
+
+    // Check if there are any incomplete questions before validating
+    const hasIncompleteQuestions = mcqQuestions.some(q => 
+      !q.question.trim() || 
+      q.options.some(opt => !opt.trim()) || 
+      !q.correctAnswer.trim()
+    ) || voiceQuestions.some(q => !q.trim());
+
+    // If there are incomplete questions, show a confirmation dialog
+    if (hasIncompleteQuestions) {
+      const confirmed = window.confirm(
+        'You have some incomplete questions.\n\n' +
+        'MCQ Questions: ' + mcqQuestions.filter(q => 
+          !q.question.trim() || 
+          q.options.some(opt => !opt.trim()) || 
+          !q.correctAnswer.trim()
+        ).length + ' incomplete\n' +
+        'Voice Questions: ' + voiceQuestions.filter(q => !q.trim()).length + ' incomplete\n\n' +
+        'Do you want to proceed with submission anyway?'
+      );
+      
+      if (!confirmed) {
+        return; // User cancelled the submission
+      }
+    }
+
+    // For custom assessment, validate and submit custom questions
+    if (!validateCustomQuestions()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      await onSubmit('custom', {
+        customMcqQuestions: mcqQuestions,
+        customVoiceQuestions: voiceQuestions.map(q => ({ question: q }))
+      });
+    } catch (err) {
+      setError(err.message || 'Failed to create custom assessment');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Function to handle Excel file upload
+  const handleExcelFileUpload = async (file) => {
+    // Check file type
+    if (!file.name.endsWith('.xlsx')) {
+      setError('Please upload a valid Excel file (.xlsx)');
+      return;
+    }
+    
+    // Check file size (limit to 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File size exceeds 5MB limit');
+      return;
+    }
+    
+    setIsProcessing(true);
+    setError('');
+    setExcelFile(file);
+    
+    try {
+      // Dynamically import xlsx library
+      const XLSX = await import('xlsx');
+      
+      // Read the Excel file
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          
+          // Process MCQ Questions sheet
+          const mcqSheetName = workbook.SheetNames.find(name => name.includes('MCQ'));
+          if (!mcqSheetName) {
+            setError('MCQ Questions sheet not found in the Excel file');
+            setIsProcessing(false);
+            return;
+          }
+          
+          const mcqSheet = workbook.Sheets[mcqSheetName];
+          const mcqData = XLSX.utils.sheet_to_json(mcqSheet);
+          
+          // Validate MCQ data
+          if (mcqData.length !== 10) {
+            setError(`Expected exactly 10 MCQ questions, but found ${mcqData.length}`);
+            setIsProcessing(false);
+            return;
+          }
+          
+          // Format MCQ questions
+          const formattedMcqQuestions = mcqData.map((row, index) => {
+            // Extract options from Option A, Option B, etc.
+            const options = [
+              row['Option A'] || '',
+              row['Option B'] || '',
+              row['Option C'] || '',
+              row['Option D'] || ''
+            ];
+            
+            return {
+              question: row['Question'] || '',
+              options: options,
+              correctAnswer: row['Correct Answer'] || ''
+            };
+          });
+          
+          // Process Voice Questions sheet
+          const voiceSheetName = workbook.SheetNames.find(name => name.includes('Voice'));
+          if (!voiceSheetName) {
+            setError('Voice Questions sheet not found in the Excel file');
+            setIsProcessing(false);
+            return;
+          }
+          
+          const voiceSheet = workbook.Sheets[voiceSheetName];
+          const voiceData = XLSX.utils.sheet_to_json(voiceSheet);
+          
+          // Validate voice data
+          if (voiceData.length !== 5) {
+            setError(`Expected exactly 5 voice questions, but found ${voiceData.length}`);
+            setIsProcessing(false);
+            return;
+          }
+          
+          // Format voice questions (extract just the text)
+          const formattedVoiceQuestions = voiceData.map(row => row['Question Text'] || '');
+          
+          // Update state with the parsed questions
+          setMcqQuestions(formattedMcqQuestions);
+          setVoiceQuestions(formattedVoiceQuestions);
+          
+          // Show success message with toast instead of alert
+          toast.success(`Successfully loaded ${formattedMcqQuestions.length} MCQ questions and ${formattedVoiceQuestions.length} voice questions from the Excel file.`, {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+          // Automatically show preview after successful upload
+          setShowPreviewModal(true);
+        } catch (err) {
+          setError('Error processing Excel file: ' + err.message);
+          setExcelFile(null);
+        } finally {
+          setIsProcessing(false);
+        }
+      };
+      
+      reader.onerror = () => {
+        setError('Error reading the file');
+        setExcelFile(null);
+        setIsProcessing(false);
+      };
+      
+      reader.readAsArrayBuffer(file);
+    } catch (err) {
+      setError('Failed to load Excel processing library: ' + err.message);
+      setExcelFile(null);
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <motion.div
+          className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-y-auto"
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        >
+          <div className="p-6 md:p-8">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Create Assessment</h2>
+                <p className="text-gray-600 mt-1">Choose assessment type and configure questions</p>
+              </div>
+              <button 
+                onClick={onClose}
+                className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors duration-200"
+              >
+                <FontAwesomeIcon icon={faTimes} className="text-gray-500" />
+              </button>
+            </div>
+
+            <div className="mb-8">
+              <div className="flex flex-wrap border-b border-gray-200 -mx-1">
+                <button
+                  className={`m-1 px-6 py-3 font-medium text-sm rounded-lg transition-all duration-200 flex items-center gap-2 ${
+                    assessmentType === 'ai'
+                      ? 'bg-blue-100 text-blue-700 shadow-sm'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                  onClick={() => setAssessmentType('ai')}
+                >
+                  <FontAwesomeIcon icon={faRobot} />
+                  AI Generated Assessment
+                </button>
+                <button
+                  className={`m-1 px-6 py-3 font-medium text-sm rounded-lg transition-all duration-200 flex items-center gap-2 ${
+                    assessmentType === 'custom'
+                      ? 'bg-blue-100 text-blue-700 shadow-sm'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                  onClick={() => setAssessmentType('custom')}
+                >
+                  <FontAwesomeIcon icon={faUserEdit} />
+                  Custom Assessment
+                </button>
+              </div>
+            </div>
+
+            {assessmentType === 'ai' && (
+              <div className="text-center py-8">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <FontAwesomeIcon icon={faRobot} className="text-3xl text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">AI Generated Assessment</h3>
+                <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
+                  Automatically generate 10 MCQ questions and 5 voice questions based on the candidate's resume and job description.
+                </p>
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 text-left max-w-2xl mx-auto shadow-sm">
+                  <h4 className="font-bold text-blue-800 mb-4 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faInfoCircle} />
+                    What to expect:
+                  </h4>
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <FontAwesomeIcon icon={faCheck} className="text-blue-600 text-xs" />
+                      </div>
+                      <span className="text-blue-800">10 technical and behavioral MCQ questions</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <FontAwesomeIcon icon={faCheck} className="text-blue-600 text-xs" />
+                      </div>
+                      <span className="text-blue-800">5 voice interview questions</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <FontAwesomeIcon icon={faCheck} className="text-blue-600 text-xs" />
+                      </div>
+                      <span className="text-blue-800">Automated question generation based on job requirements</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <FontAwesomeIcon icon={faCheck} className="text-blue-600 text-xs" />
+                      </div>
+                      <span className="text-blue-800">Proctored assessment with video recording</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {assessmentType === 'custom' && (
+              <div className="space-y-8">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 shadow-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <FontAwesomeIcon icon={faInfoCircle} className="text-blue-600" />
+                    </div>
+                    <h4 className="font-bold text-blue-800 text-lg">Requirements</h4>
+                  </div>
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <FontAwesomeIcon icon={faCheck} className="text-blue-600 text-xs" />
+                      </div>
+                      <span className="text-blue-800">Exactly 10 MCQ questions required (currently <span className="font-semibold">{mcqQuestions.length}/10</span>)</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <FontAwesomeIcon icon={faCheck} className="text-blue-600 text-xs" />
+                      </div>
+                      <span className="text-blue-800">Each MCQ must have exactly 4 options with 1 correct answer</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <FontAwesomeIcon icon={faCheck} className="text-blue-600 text-xs" />
+                      </div>
+                      <span className="text-blue-800">Exactly 5 voice questions required (currently <span className="font-semibold">{voiceQuestions.length}/5</span>)</span>
+                    </li>
+                  </ul>
+                </div>
+                
+                {/* Excel File Upload Section */}
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                      <FontAwesomeIcon icon={faFileExcel} className="text-green-600" />
+                      Upload Questions from Excel File
+                    </h3>
+                    <p className="text-gray-600 text-sm mt-1">Upload your pre-prepared questions in Excel format</p>
+                  </div>
+                  <div className="p-6">
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-5 text-center">
+                      <div className="flex flex-col items-center justify-center gap-4">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                          <FontAwesomeIcon icon={faFileExcel} className="text-2xl text-green-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-gray-900 text-lg mb-2">Upload Excel Template</h4>
+                          <p className="text-gray-600 mb-4 max-w-md mx-auto">
+                            Upload your questions from our Excel template. The file should contain 10 MCQ questions and 5 voice questions.
+                          </p>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+                          <label className="flex-1 relative">
+                            <input
+                              type="file"
+                              accept=".xlsx"
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  handleExcelFileUpload(file);
+                                }
+                              }}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              disabled={isProcessing}
+                            />
+                            <div className={`px-6 py-3 rounded-lg font-medium text-white transition-all duration-200 flex items-center justify-center gap-2 ${isProcessing ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 shadow-md hover:shadow-lg cursor-pointer'}`}>
+                              <FontAwesomeIcon icon={isProcessing ? faSpinner : faUpload} spin={isProcessing} />
+                              {isProcessing ? 'Processing...' : 'Choose File'}
+                            </div>
+                          </label>
+                          <a 
+                            href="/src/assets/templates/Recruitment_Assessment_Template.xlsx" 
+                            download="Recruitment_Assessment_Template.xlsx"
+                            className="px-6 py-3 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors duration-200 flex items-center justify-center gap-2"
+                          >
+                            <FontAwesomeIcon icon={faDownload} />
+                            Download Template
+                          </a>
+                        </div>
+                        {excelFile && (
+                          <div className="mt-3 text-sm text-gray-600 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
+                            Selected: {excelFile.name}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                      <FontAwesomeIcon icon={faList} className="text-blue-600" />
+                      Custom MCQ Questions
+                    </h3>
+                    <p className="text-gray-600 text-sm mt-1">Create 10 multiple choice questions with 4 options each</p>
+                  </div>
+                  <div className="p-6">
+                    {error && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                        <div className="flex items-center gap-2">
+                          <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-600" />
+                          <p className="text-red-700 font-medium">Error</p>
+                        </div>
+                        <p className="text-red-700 text-sm mt-2">{error}</p>
+                      </div>
+                    )}
+                    <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+                      {mcqQuestions.map((question, qIndex) => (
+                        <div key={qIndex} className="border border-gray-200 rounded-lg p-5 bg-gray-50 hover:bg-white transition-colors duration-200">
+                          <div className="flex justify-between items-start mb-4 pb-3 border-b border-gray-200">
+                            <h4 className="font-bold text-gray-900 text-lg flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <span className="text-blue-700 font-semibold text-sm">{qIndex + 1}</span>
+                              </div>
+                              Question {qIndex + 1}
+                            </h4>
+                          </div>
+                          <div className="mb-4">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                              <FontAwesomeIcon icon={faQuestionCircle} className="text-blue-500" />
+                              Question Text
+                            </label>
+                            <textarea
+                              value={question.question}
+                              onChange={(e) => updateMcqQuestion(qIndex, 'question', e.target.value)}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                              rows="3"
+                              placeholder="Enter your question here..."
+                            />
+                          </div>
+                          <div className="mb-4">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                              <FontAwesomeIcon icon={faList} className="text-blue-500" />
+                              Options (Exactly 4 required)
+                            </label>
+                            <div className="space-y-3">
+                              {question.options.map((option, oIndex) => (
+                                <div key={oIndex} className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-gray-700 font-medium text-sm">{String.fromCharCode(65 + oIndex)}</span>
+                                  </div>
+                                  <input
+                                    type="text"
+                                    value={option}
+                                    onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
+                                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                    placeholder={`Option ${String.fromCharCode(65 + oIndex)}...`}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                              <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
+                              Correct Answer
+                            </label>
+                            <select
+                              value={question.correctAnswer}
+                              onChange={(e) => updateMcqQuestion(qIndex, 'correctAnswer', e.target.value)}
+                              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                            >
+                              <option value="">Select correct answer</option>
+                              {question.options.map((option, index) => (
+                                <option key={index} value={option}>
+                                  {String.fromCharCode(65 + index)}. {option}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                      <FontAwesomeIcon icon={faMicrophone} className="text-blue-600" />
+                      Custom Voice Questions
+                    </h3>
+                    <p className="text-gray-600 text-sm mt-1">Create 5 voice interview questions</p>
+                  </div>
+                  <div className="p-6">
+                    <div className="space-y-5">
+                      {voiceQuestions.map((question, index) => (
+                        <div key={index} className="flex items-start gap-4 p-4 rounded-lg border border-gray-200 bg-gray-50 hover:bg-white transition-colors duration-200">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
+                            <span className="text-blue-700 font-semibold text-sm">{index + 1}</span>
+                          </div>
+                          <div className="flex-1">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Voice Question {index + 1}
+                            </label>
+                            <textarea
+                              value={question}
+                              onChange={(e) => updateVoiceQuestion(index, e.target.value)}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                              rows="3"
+                              placeholder="Enter your voice question here..."
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-gray-200">
+              <motion.button
+                onClick={onClose}
+                className="px-6 py-3 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors duration-200 flex items-center gap-2"
+                disabled={isSubmitting}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <FontAwesomeIcon icon={faTimes} />
+                Cancel
+              </motion.button>
+              {assessmentType === 'custom' && (
+                <motion.button
+                  onClick={() => setShowPreviewModal(true)}
+                  className="px-6 py-3 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors duration-200 flex items-center gap-2"
+                  disabled={isSubmitting}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <FontAwesomeIcon icon={faEye} />
+                  Preview
+                </motion.button>
+              )}
+              <motion.button
+                onClick={handleSubmit}
+                className={`px-6 py-3 rounded-lg font-medium text-white transition-all duration-200 flex items-center gap-2 ${
+                  isSubmitting 
+                    ? 'bg-blue-400 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 shadow-md hover:shadow-lg'
+                }`}
+                disabled={isSubmitting}
+                whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
+                whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
+              >
+                {isSubmitting ? (
+                  <>
+                    <FontAwesomeIcon icon={faSpinner} spin />
+                    Creating Assessment...
+                  </>
+                ) : (
+                  <>
+                    <FontAwesomeIcon icon={faPaperPlane} />
+                    {assessmentType === 'ai' ? 'Generate AI Assessment' : 'Create Custom Assessment'}
+                  </>
+                )}
+              </motion.button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+      <PreviewModal 
+        show={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        mcqQuestions={mcqQuestions}
+        voiceQuestions={voiceQuestions}
+      />
+    </AnimatePresence>
+  );
+};
+
+// Preview Modal Component
+const PreviewModal = ({ show, onClose, mcqQuestions, voiceQuestions }) => {
+  if (!show) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+        <motion.div
+          className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-y-auto"
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        >
+          <div className="p-6 md:p-8">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Assessment Preview</h2>
+                <p className="text-gray-600 mt-1">Review your questions before submitting</p>
+              </div>
+              <button 
+                onClick={onClose}
+                className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors duration-200"
+              >
+                <FontAwesomeIcon icon={faTimes} className="text-gray-500" />
+              </button>
+            </div>
+
+            <div className="space-y-8">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faList} className="text-blue-600" />
+                    MCQ Questions ({mcqQuestions.length})
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+                    {mcqQuestions.map((question, qIndex) => (
+                      <div key={qIndex} className="border border-gray-200 rounded-lg p-5 bg-gray-50">
+                        <div className="flex justify-between items-start mb-4 pb-3 border-b border-gray-200">
+                          <h4 className="font-bold text-gray-900 text-lg flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                              <span className="text-blue-700 font-semibold text-sm">{qIndex + 1}</span>
+                            </div>
+                            Question {qIndex + 1}
+                          </h4>
+                        </div>
+                        <div className="mb-4">
+                          <p className="text-gray-800 font-medium mb-3">{question.question || <span className="text-gray-400 italic">No question text provided</span>}</p>
+                        </div>
+                        <div className="mb-4">
+                          <h5 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faList} className="text-blue-500" />
+                            Options
+                          </h5>
+                          <div className="space-y-2">
+                            {question.options.map((option, oIndex) => (
+                              <div key={oIndex} className="flex items-center gap-3 p-2 rounded bg-white border border-gray-200">
+                                <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                  <span className="text-gray-700 font-medium text-xs">{String.fromCharCode(65 + oIndex)}</span>
+                                </div>
+                                <span className={question.correctAnswer === option ? "font-semibold text-green-600" : "text-gray-700"}>
+                                  {option || <span className="text-gray-400 italic">No option text provided</span>}
+                                  {question.correctAnswer === option && (
+                                    <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Correct</span>
+                                  )}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faMicrophone} className="text-blue-600" />
+                    Voice Questions ({voiceQuestions.length})
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-5">
+                    {voiceQuestions.map((question, index) => (
+                      <div key={index} className="flex items-start gap-4 p-4 rounded-lg border border-gray-200 bg-gray-50">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
+                          <span className="text-blue-700 font-semibold text-sm">{index + 1}</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-gray-800 font-medium">
+                            {question || <span className="text-gray-400 italic">No question text provided</span>}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-4 pt-4 border-t border-gray-200">
+                <motion.button
+                  onClick={onClose}
+                  className="px-6 py-3 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors duration-200 flex items-center gap-2"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <FontAwesomeIcon icon={faTimes} />
+                  Close Preview
+                </motion.button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};
+
+// Enhanced Status Badge Component
+const CandidateStatusBadge = ({ session, assessmentSessionId, candidateDecisions }) => {
+  // Check for candidate decision first (highest priority)
+  const decision = candidateDecisions[assessmentSessionId];
+  
+  if (decision) {
+    switch (decision.decision) {
+      case 'selected':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-500 to-green-600 text-white shadow-sm">
+            <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
+            Selected ✅
+          </span>
+        );
+      case 'rejected':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-red-500 to-red-600 text-white shadow-sm">
+            <FontAwesomeIcon icon={faTimes} className="mr-1" />
+            Rejected ❌
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+            Decision Pending
+          </span>
+        );
+    }
+  }
+  
+  // Fall back to assessment session status
+  if (!session) return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Not Sent</span>;
+  
+  switch (session.status) {
+    case 'completed': 
+      return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Assessment Done</span>;
+    case 'in-progress': 
+      return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">In Progress</span>;
+    default: 
+      return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Pending</span>;
+  }
+};
 
 function CandidateTable() {
   const [expandedRow, setExpandedRow] = useState(null);
@@ -31,6 +846,9 @@ function CandidateTable() {
   const [loading, setLoading] = useState(true);
   const [testScores, setTestScores] = useState([]);
   const [showGenerationModal, setShowGenerationModal] = useState(false);
+  const [showCustomAssessmentModal, setShowCustomAssessmentModal] = useState(false);
+  const [currentCandidate, setCurrentCandidate] = useState(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [generationStatus, setGenerationStatus] = useState({
     loading: false,
     error: null,
@@ -43,10 +861,12 @@ function CandidateTable() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const location = useLocation();
+  const navigate = useNavigate();
   const initialViewMode = location.state?.view || 'all';
   const [viewMode, setViewMode] = useState(initialViewMode);
   const [recentCandidates, setRecentCandidates] = useState([]);
   const [historicalCandidates, setHistoricalCandidates] = useState([]);
+  const [candidateDecisions, setCandidateDecisions] = useState({});
   const [recommendedCandidates, setRecommendedCandidates] = useState([]);
   const [selectedFilters, setSelectedFilters] = useState({
     skills: [],
@@ -63,6 +883,12 @@ function CandidateTable() {
   const [scoreDropdownOpen, setScoreDropdownOpen] = useState({});
   const [recordingsDropdownOpen, setRecordingsDropdownOpen] = useState({});
   const [voiceAnswersDropdownOpen, setVoiceAnswersDropdownOpen] = useState({});
+  const [mergedPdfDropdownOpen, setMergedPdfDropdownOpen] = useState({});
+  
+  // 🔥 NEW: Bulk selection state for merged documents
+  const [selectedMergedDocs, setSelectedMergedDocs] = useState(new Set());
+  const [isAllMergedDocsSelected, setIsAllMergedDocsSelected] = useState(false);
+  const [bulkDownloadInProgress, setBulkDownloadInProgress] = useState(false);
   
   // Refs for dropdown containers
   const resumeDropdownRefs = useRef({});
@@ -70,6 +896,7 @@ function CandidateTable() {
   const scoreDropdownRefs = useRef({});
   const recordingsDropdownRefs = useRef({});
   const voiceAnswersDropdownRefs = useRef({});
+  const mergedPdfDropdownRefs = useRef({});
 
   const filterIcons = {
     jobType: faUserTie,
@@ -147,6 +974,10 @@ function CandidateTable() {
                 "Candidate Industrial Experience": member.matchingResult[0].Analysis?.["Candidate Industrial Experience"] || "N/A",
                 "Required Domain Experience": member.matchingResult[0].Analysis?.["Required Domain Experience"] || "N/A",
                 "Candidate Domain Experience": member.matchingResult[0].Analysis?.["Candidate Domain Experience"] || "N/A",
+                // New fields
+                "Experience Threshold Compliance": member.matchingResult[0].Analysis?.["Experience Threshold Compliance"] || "N/A",
+                "Recent Experience Relevance": member.matchingResult[0].Analysis?.["Recent Experience Relevance"] || "N/A",
+                "Analysis Summary": member.matchingResult[0]["Analysis Summary"] || member.matchingResult[0].Analysis?.["Analysis Summary"] || "N/A"
               }
             }] : []
           }
@@ -177,6 +1008,25 @@ function CandidateTable() {
       }
     };
     fetchSegmentedData();
+  }, []);
+
+  // Fetch candidate decisions
+  useEffect(() => {
+    const fetchCandidateDecisions = async () => {
+      try {
+        const response = await axiosInstance.get('/api/candidate-decisions');
+        const decisionsMap = {};
+        response.data.forEach(decision => {
+          if (decision.assessmentSessionId) {
+            decisionsMap[decision.assessmentSessionId] = decision;
+          }
+        });
+        setCandidateDecisions(decisionsMap);
+      } catch (error) {
+        console.error('Error fetching candidate decisions:', error);
+      }
+    };
+    fetchCandidateDecisions();
   }, []);
 
   const fetchRecommendationsConsentOnly = async () => {
@@ -264,6 +1114,12 @@ function CandidateTable() {
           setVoiceAnswersDropdownOpen(prev => ({ ...prev, [key]: false }));
         }
       });
+      
+      Object.keys(mergedPdfDropdownRefs.current).forEach(key => {
+        if (mergedPdfDropdownRefs.current[key] && !mergedPdfDropdownRefs.current[key].contains(event.target)) {
+          setMergedPdfDropdownOpen(prev => ({ ...prev, [key]: false }));
+        }
+      });
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -336,7 +1192,28 @@ function CandidateTable() {
         message: `Assessment sent to ${candidateEmail}`,
         testLink: sessionResponse.data.testLink
       });
+      
+      // Show success toast immediately
+      toast.success(`Assessment successfully sent to ${candidateEmail}!`, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
       setTimeout(() => {
+          // Show success message with toast instead of alert
+          toast.success(`Successfully loaded ${formattedMcqQuestions.length} MCQ questions and ${formattedVoiceQuestions.length} voice questions from the Excel file.`, {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+          // Automatically show preview after successful upload
+          setShowPreviewModal(true);
         setShowGenerationModal(false);
         const fetchCandidates = async () => {
           try {
@@ -367,6 +1244,10 @@ function CandidateTable() {
                   "Candidate Industrial Experience": member.matchingResult[0].Analysis?.["Candidate Industrial Experience"] || "N/A",
                   "Required Domain Experience": member.matchingResult[0].Analysis?.["Required Domain Experience"] || "N/A",
                   "Candidate Domain Experience": member.matchingResult[0].Analysis?.["Candidate Domain Experience"] || "N/A",
+                  // New fields
+                  "Experience Threshold Compliance": member.matchingResult[0].Analysis?.["Experience Threshold Compliance"] || "N/A",
+                  "Recent Experience Relevance": member.matchingResult[0].Analysis?.["Recent Experience Relevance"] || "N/A",
+                  "Analysis Summary": member.matchingResult[0]["Analysis Summary"] || member.matchingResult[0].Analysis?.["Analysis Summary"] || "N/A"
                 }
               }] : []
             }));
@@ -394,6 +1275,147 @@ function CandidateTable() {
         message: null,
         testLink: error.response?.data?.testLink
       });
+    }
+  };
+
+  // New function to handle custom assessment creation
+  const createCustomAssessment = async (candidateData, customQuestions) => {
+    setShowGenerationModal(true);
+    setGenerationStatus({
+      loading: true,
+      error: null,
+      success: false,
+      message: 'Creating custom assessment...'
+    });
+    
+    try {
+      const { customMcqQuestions, customVoiceQuestions } = customQuestions;
+      
+      setGenerationStatus(prev => ({
+        ...prev,
+        message: 'Sending custom assessment email...'
+      }));
+      
+      const sessionResponse = await axiosInstance.post(
+        '/api/create-custom-assessment',
+        {
+          candidateEmail: candidateData.email,
+          jobTitle: candidateData.jobTitle,
+          resumeId: candidateData.resumeId,
+          jobDescriptionId: candidateData.jdId,
+          customMcqQuestions,
+          customVoiceQuestions
+        }
+      );
+      
+      if (!sessionResponse.data.success) {
+        throw new Error(sessionResponse.data.error || 'Failed to create custom assessment');
+      }
+      
+      setGenerationStatus({
+        loading: false,
+        error: null,
+        success: true,
+        message: `Custom assessment sent to ${candidateData.email}`,
+        testLink: sessionResponse.data.testLink
+      });
+      
+      // Show success toast
+      toast.success(`Custom assessment successfully sent to ${candidateData.email}!`, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      
+      setTimeout(() => {
+        setShowGenerationModal(false);
+        setShowCustomAssessmentModal(false);
+        // Refresh candidate data
+        const fetchCandidates = async () => {
+          try {
+            const response = await axiosInstance.get("/api/candidate-filtering");
+            const data = response.data;
+            const uniqueCandidates = data.filter((member, index, self) => {
+              return (
+                index ===
+                self.findIndex(
+                  (c) =>
+                    c.resumeId === member.resumeId &&
+                    c.jobDescriptionId === member.jobDescriptionId
+                )
+              );
+            }).map((member) => ({
+              ...member,
+              matchingResult: member.matchingResult?.[0] ? [{
+                "Resume Data": member.matchingResult[0]["Resume Data"],
+                Analysis: {
+                  "Matching Score": member.matchingResult[0].Analysis?.["Matching Score"] || 0,
+                  "Matched Skills": member.matchingResult[0].Analysis?.["Matched Skills"] || [],
+                  "Unmatched Skills": member.matchingResult[0].Analysis?.["Unmatched Skills"] || [],
+                  "Matched Skills Percentage": member.matchingResult[0].Analysis?.["Matched Skills Percentage"] || 0,
+                  "Unmatched Skills Percentage": member.matchingResult[0].Analysis?.["Unmatched Skills Percentage"] || 0,
+                  Strengths: member.matchingResult[0].Analysis?.Strengths || [],
+                  Recommendations: member.matchingResult[0].Analysis?.Recommendations || [],
+                  "Required Industrial Experience": member.matchingResult[0].Analysis?.["Required Industrial Experience"] || "N/A",
+                  "Candidate Industrial Experience": member.matchingResult[0].Analysis?.["Candidate Industrial Experience"] || "N/A",
+                  "Required Domain Experience": member.matchingResult[0].Analysis?.["Required Domain Experience"] || "N/A",
+                  "Candidate Domain Experience": member.matchingResult[0].Analysis?.["Candidate Domain Experience"] || "N/A",
+                  // New fields
+                  "Experience Threshold Compliance": member.matchingResult[0].Analysis?.["Experience Threshold Compliance"] || "N/A",
+                  "Recent Experience Relevance": member.matchingResult[0].Analysis?.["Recent Experience Relevance"] || "N/A",
+                  "Analysis Summary": member.matchingResult[0]["Analysis Summary"] || member.matchingResult[0].Analysis?.["Analysis Summary"] || "N/A"
+                }
+              }] : []
+            }));
+            setCandidates(uniqueCandidates);
+            setMembers(uniqueCandidates);
+            setFilteredMembers(uniqueCandidates);
+          } catch (error) {
+            console.error("Error fetching candidate data:", error.message);
+          }
+        };
+        fetchCandidates();
+      }, 10000);
+    } catch (error) {
+      console.error('Custom assessment error:', error);
+      let errorMessage = 'Failed to create custom assessment';
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      setGenerationStatus({
+        loading: false,
+        error: errorMessage,
+        success: false,
+        message: null,
+        testLink: error.response?.data?.testLink
+      });
+    }
+  };
+
+  // New function to handle assessment type selection
+  const handleAssessmentSelection = (candidateData) => {
+    setCurrentCandidate(candidateData);
+    setShowCustomAssessmentModal(true);
+  };
+
+  // New function to handle assessment submission from modal
+  const handleAssessmentSubmit = async (type, customQuestions = null) => {
+    if (type === 'ai') {
+      // Call the existing sendTestLink function
+      await sendTestLink(
+        currentCandidate.email,
+        currentCandidate.jobTitle,
+        currentCandidate.resumeId,
+        currentCandidate.jdId
+      );
+    } else if (type === 'custom' && customQuestions) {
+      // Call the new createCustomAssessment function
+      await createCustomAssessment(currentCandidate, customQuestions);
     }
   };
 
@@ -556,6 +1578,196 @@ function CandidateTable() {
     }
   };
 
+  // ===========================
+  // MERGED PDF HANDLERS
+  // ===========================
+  
+  const handleGenerateMergedPDF = async (assessmentSessionId) => {
+    try {
+      console.log('🔄 Generating merged PDF for session:', assessmentSessionId);
+      toast.info('🔄 Generating merged PDF...', { autoClose: 3000 });
+      
+      const response = await axiosInstance.post(`/api/merged-pdf/generate/${assessmentSessionId}`);
+      
+      if (response.data.success) {
+        const message = response.data.message;
+        toast.success(`✅ ${message}`, { autoClose: 5000 });
+        console.log('✅ Merged PDF generated:', response.data.data);
+      } else {
+        throw new Error(response.data.error || 'Failed to generate merged PDF');
+      }
+    } catch (error) {
+      console.error('❌ Error generating merged PDF:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to generate merged PDF';
+      toast.error(`❌ ${errorMessage}`, { autoClose: 5000 });
+    }
+  };
+  
+  const handleViewMergedPDF = async (assessmentSessionId) => {
+    try {
+      console.log('👁️ Viewing merged PDF for session:', assessmentSessionId);
+      
+      // First try to generate/get the merged PDF
+      const generateResponse = await axiosInstance.post(`/api/merged-pdf/generate/${assessmentSessionId}`);
+      
+      if (generateResponse.data.success && generateResponse.data.data.downloadUrl) {
+        window.open(generateResponse.data.data.downloadUrl, '_blank');
+        toast.success('📄 Opening merged PDF for viewing', { autoClose: 3000 });
+      } else {
+        throw new Error('Failed to get merged PDF view URL');
+      }
+    } catch (error) {
+      console.error('❌ Error viewing merged PDF:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to view merged PDF';
+      toast.error(`❌ ${errorMessage}`, { autoClose: 5000 });
+    }
+  };
+  
+  const handleDownloadMergedPDF = async (assessmentSessionId) => {
+    try {
+      console.log('⬇️ Downloading merged PDF for session:', assessmentSessionId);
+      
+      // First try to generate/get the merged PDF
+      const generateResponse = await axiosInstance.post(`/api/merged-pdf/generate/${assessmentSessionId}?download=true`);
+      
+      if (generateResponse.data.success && generateResponse.data.data.downloadUrl) {
+        // Create a temporary link to trigger download
+        const link = document.createElement('a');
+        link.href = generateResponse.data.data.downloadUrl;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast.success('📥 Merged PDF download started', { autoClose: 3000 });
+      } else {
+        throw new Error('Failed to get merged PDF download URL');
+      }
+    } catch (error) {
+      console.error('❌ Error downloading merged PDF:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to download merged PDF';
+      toast.error(`❌ ${errorMessage}`, { autoClose: 5000 });
+    }
+  };
+  
+  // 🔥 NEW: Bulk download handler for merged documents
+  const handleBulkMergedDocsDownload = async () => {
+    if (selectedMergedDocs.size === 0) {
+      toast.warning('⚠️ Please select merged documents to download', { toastId: 'bulk-merged-download-warning' });
+      return;
+    }
+    
+    setBulkDownloadInProgress(true);
+    const loadingToast = toast.loading(`📦 Preparing to download ${selectedMergedDocs.size} merged documents...`);
+    
+    try {
+      console.log('🔥 [BULK MERGED DOWNLOAD] Starting bulk merged documents download:', {
+        selectedCount: selectedMergedDocs.size,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Convert Set to Array and extract assessment session IDs
+      // FIX: Use the actual candidate IDs instead of array indexes
+      const selectedAssessmentSessionIds = Array.from(selectedMergedDocs).map(candidateId => {
+        // Find the candidate in filteredMembers by ID
+        const candidate = filteredMembers.find(member => member._id === candidateId);
+        const session = candidate?.assessmentSession;
+        
+        // Get the assessment session ID
+        return session?._id || null;
+      }).filter(id => id !== null); // Filter out any null IDs
+      
+      if (selectedAssessmentSessionIds.length === 0) {
+        throw new Error('No valid assessment sessions found for download');
+      }
+      
+      console.log('📋 [BULK MERGED DOWNLOAD] Valid sessions for download:', {
+        totalCount: selectedMergedDocs.size,
+        validCount: selectedAssessmentSessionIds.length,
+        invalidCount: selectedMergedDocs.size - selectedAssessmentSessionIds.length,
+        assessmentSessionIds: selectedAssessmentSessionIds
+      });
+      
+      // Call backend bulk download endpoint with assessment session IDs
+      const response = await axiosInstance.post('/api/merged-pdf/bulk-download', {
+        assessmentSessionIds: selectedAssessmentSessionIds
+      });
+      
+      if (response.data.success && response.data.downloadUrl) {
+        // Update loading toast
+        toast.update(loadingToast, {
+          render: `✅ Processing ${selectedAssessmentSessionIds.length} merged documents...`,
+          type: 'success',
+          isLoading: false,
+          autoClose: 3000
+        });
+        
+        // Start the bulk download
+        const link = document.createElement('a');
+        link.href = response.data.downloadUrl;
+        link.download = `bulk_merged_documents_${new Date().toISOString().split('T')[0]}.zip`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Show success message
+        toast.success(
+          `🎉 Successfully downloaded ${selectedAssessmentSessionIds.length} merged document${selectedAssessmentSessionIds.length !== 1 ? 's' : ''}!`, 
+          { toastId: 'bulk-merged-download-success' }
+        );
+        
+        // Clear selection
+        setSelectedMergedDocs(new Set());
+        setIsAllMergedDocsSelected(false);
+      } else {
+        throw new Error(response.data.error || 'Failed to generate bulk download');
+      }
+      
+    } catch (error) {
+      console.error('❌ [BULK MERGED DOWNLOAD] Error:', error);
+      toast.update(loadingToast, {
+        render: '❌ Bulk download failed',
+        type: 'error',
+        isLoading: false,
+        autoClose: 5000
+      });
+      
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to download merged documents';
+      toast.error(`❌ ${errorMessage}`, { toastId: 'bulk-merged-download-error' });
+    } finally {
+      setBulkDownloadInProgress(false);
+    }
+  };
+
+  // 🔥 NEW: Bulk selection handlers for merged documents
+  // FIX: Store candidate IDs instead of array indexes
+  const toggleMergedDocSelection = (candidateId) => {
+    const newSelected = new Set(selectedMergedDocs);
+    if (newSelected.has(candidateId)) {
+      newSelected.delete(candidateId);
+    } else {
+      newSelected.add(candidateId);
+    }
+    setSelectedMergedDocs(newSelected);
+    
+    // Update "select all" state based on the sorted array being displayed
+    setIsAllMergedDocsSelected(newSelected.size === sortedCandidatesToDisplay.length && sortedCandidatesToDisplay.length > 0);
+  };
+  
+  const toggleSelectAllMergedDocs = () => {
+    if (isAllMergedDocsSelected) {
+      setSelectedMergedDocs(new Set());
+    } else {
+      // FIX: Store candidate IDs from the sorted array being displayed
+      const allCandidateIds = new Set();
+      sortedCandidatesToDisplay.forEach((candidate) => allCandidateIds.add(candidate._id));
+      setSelectedMergedDocs(allCandidateIds);
+    }
+    setIsAllMergedDocsSelected(!isAllMergedDocsSelected);
+  };
+  
+  // Also fix the "select all" checkbox state to use the sorted array
   const calculateTotalExperience = (experiences) => {
     if (!experiences || !Array.isArray(experiences)) return "0 years";
     return experiences.reduce((total, exp) => {
@@ -761,6 +1973,69 @@ function CandidateTable() {
             </motion.button>
           </div>
         </motion.div>
+        
+        {/* 🔥 NEW: Bulk Actions Panel for Merged Documents */}
+        <AnimatePresence>
+          {selectedMergedDocs.size > 0 && (
+            <motion.div 
+              className="card-glass mb-6 relative overflow-hidden"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <FontAwesomeIcon icon={faFilePdf} className="text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">
+                      {selectedMergedDocs.size} merged document{selectedMergedDocs.size !== 1 ? 's' : ''} selected
+                    </h3>
+                    <p className="text-sm text-gray-600">Ready for bulk download</p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-3 w-full sm:w-auto">
+                  <motion.button
+                    className="btn-modern bg-gray-100 hover:bg-gray-200 text-gray-700 flex-1 sm:flex-none"
+                    onClick={() => {
+                      setSelectedMergedDocs(new Set());
+                      setIsAllMergedDocsSelected(false);
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    disabled={bulkDownloadInProgress}
+                  >
+                    <FontAwesomeIcon icon={faTimes} />
+                    <span>Clear</span>
+                  </motion.button>
+                  
+                  <motion.button
+                    className="btn-primary flex items-center gap-2 flex-1 sm:flex-none"
+                    onClick={handleBulkMergedDocsDownload}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    disabled={bulkDownloadInProgress}
+                  >
+                    {bulkDownloadInProgress ? (
+                      <>
+                        <FontAwesomeIcon icon={faSpinner} spin />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faDownload} />
+                        <span>Download {selectedMergedDocs.size} Merged Document{selectedMergedDocs.size !== 1 ? 's' : ''}</span>
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
           {/* Filter Modals */}
           <AnimatePresence>
             {Object.keys(filterIcons).map((filter) => (
@@ -937,12 +2212,23 @@ function CandidateTable() {
               <table className="w-full min-w-max">
                 <thead className="bg-primary-gradient sticky top-0">
                   <tr>
+                    {/* Checkbox column for bulk selection */}
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:px-6 md:py-4 md:text-sm w-12">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+                        checked={isAllMergedDocsSelected}
+                        onChange={toggleSelectAllMergedDocs}
+                        aria-label="Select all candidates for bulk download"
+                      />
+                    </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:px-6 md:py-4 md:text-sm">Rank</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:px-6 md:py-4 md:text-sm">Candidate</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:px-6 md:py-4 md:text-sm">Job Title</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:px-6 md:py-4 md:text-sm">Experience</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:px-6 md:py-4 md:text-sm">Match %</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:px-6 md:py-4 md:text-sm">View PDF</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:px-6 md:py-4 md:text-sm">Merged PDF</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:px-6 md:py-4 md:text-sm">Interview</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:px-6 md:py-4 md:text-sm">Details</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider md:px-6 md:py-4 md:text-sm">Status</th>
@@ -977,6 +2263,18 @@ function CandidateTable() {
       transition={{ duration: 0.3, delay: index * 0.05 }}
       whileHover={{ y: -1 }}
     >
+      {/* Checkbox for bulk selection */}
+      {/* FIX: Use candidate ID instead of array index */}
+      <td className="px-4 py-3 whitespace-nowrap md:px-6 md:py-4 w-12">
+        <input
+          type="checkbox"
+          className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+          checked={selectedMergedDocs.has(result._id)}
+          onChange={() => toggleMergedDocSelection(result._id)}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Select candidate ${index + 1} for bulk download`}
+        />
+      </td>
       <td className="px-4 py-3 whitespace-nowrap md:px-6 md:py-4">
         <div className="flex items-center gap-2">
           {isRecent && viewMode !== 'recent' && (
@@ -993,12 +2291,48 @@ function CandidateTable() {
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-primary-gradient rounded-full flex items-center justify-center">
             <span className="text-white font-semibold text-sm">
-              {(resumeData.name || "N")[0].toUpperCase()}
+              {(resumeData.name || email || "N")[0].toUpperCase()}
             </span>
           </div>
           <div>
-            <div className="text-sm font-semibold text-gray-900 truncate max-w-[120px] md:max-w-none">{resumeData.name || "N/A"}</div>
-            <div className="text-xs text-gray-500 truncate max-w-[120px] md:max-w-none">{resumeData.email}</div>
+            <div className="text-sm font-semibold text-gray-900 truncate max-w-[120px] md:max-w-none">
+              {(() => {
+                // Enhanced name parsing logic - consistent with DocumentUploadPage
+                let displayName = "Unknown Candidate";
+                
+                // Priority: 1. Check if resumeData.name exists and is not an email
+                if (resumeData.name && typeof resumeData.name === 'string' && resumeData.name.trim()) {
+                  // If name is not an email format
+                  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(resumeData.name.trim())) {
+                    displayName = resumeData.name.trim();
+                  } else {
+                    // If name field contains email, parse it for display
+                    const emailParts = resumeData.name.split('@')[0].replace(/[._-]/g, ' ');
+                    const prettyName = emailParts
+                      .split(' ')
+                      .filter(Boolean)
+                      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                      .join(' ')
+                      .trim();
+                    displayName = prettyName || 'Candidate';
+                  }
+                }
+                // Priority: 2. If no proper name found, use email for parsing
+                else if (email && typeof email === 'string' && email.includes('@')) {
+                  const emailParts = email.split('@')[0].replace(/[._-]/g, ' ');
+                  const prettyName = emailParts
+                    .split(' ')
+                    .filter(Boolean)
+                    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                    .join(' ')
+                    .trim();
+                  displayName = prettyName || 'Candidate';
+                }
+                
+                return displayName;
+              })()}
+            </div>
+            <div className="text-xs text-gray-500 truncate max-w-[120px] md:max-w-none">{email}</div>
           </div>
         </div>
       </td>
@@ -1115,6 +2449,121 @@ function CandidateTable() {
         </div>
       </td>
       <td className="px-4 py-3 whitespace-nowrap md:px-6 md:py-4">
+        {/* MERGED PDF COLUMN */}
+        {session && session.status === 'completed' ? (
+          <div className="candidate-table-dropdown" ref={el => mergedPdfDropdownRefs.current[result._id] = el}>
+            <button 
+              className="btn-modern bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-200 p-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Debug log to see what session looks like
+                console.log('🔍 [MERGED PDF DEBUG] Session object:', session);
+                console.log('🔍 [MERGED PDF DEBUG] Session._id:', session?._id);
+                console.log('🔍 [MERGED PDF DEBUG] Result.assessmentSession:', result.assessmentSession);
+                console.log('🔍 [MERGED PDF DEBUG] Full result:', result);
+                setMergedPdfDropdownOpen(prev => ({
+                  ...prev,
+                  [result._id]: !prev[result._id]
+                }));
+              }}
+            >
+              <FontAwesomeIcon icon={faFilePdf} />
+            </button>
+            {mergedPdfDropdownOpen[result._id] && (
+              <div className="candidate-table-dropdown-menu bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                <button
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    // Try multiple ways to get the session ID
+                    const sessionId = session?._id || session?.id || 
+                                    result.assessmentSession?._id || 
+                                    result.assessmentSession?.id ||
+                                    (typeof result.assessmentSession === 'string' ? result.assessmentSession : null);
+                    
+                    console.log('🔄 [Generate] Extracted Session ID:', sessionId);
+                    console.log('🔄 [Generate] Session:', session);
+                    console.log('🔄 [Generate] Result.assessmentSession:', result.assessmentSession);
+                    
+                    if (sessionId) {
+                      await handleGenerateMergedPDF(sessionId);
+                    } else {
+                      console.error('❌ No session ID found in:', { session, assessmentSession: result.assessmentSession });
+                      toast.error('No assessment session ID found');
+                    }
+                    setMergedPdfDropdownOpen(prev => ({
+                      ...prev,
+                      [result._id]: false
+                    }));
+                  }}
+                >
+                  <FontAwesomeIcon icon={faFilePdf} className="mr-2" />
+                  Generate Merged PDF
+                </button>
+                <button
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const sessionId = session?._id || session?.id || 
+                                    result.assessmentSession?._id || 
+                                    result.assessmentSession?.id ||
+                                    (typeof result.assessmentSession === 'string' ? result.assessmentSession : null);
+                    
+                    console.log('👁️ [View] Extracted Session ID:', sessionId);
+                    
+                    if (sessionId) {
+                      await handleViewMergedPDF(sessionId);
+                    } else {
+                      console.error('❌ No session ID found');
+                      toast.error('No assessment session ID found');
+                    }
+                    setMergedPdfDropdownOpen(prev => ({
+                      ...prev,
+                      [result._id]: false
+                    }));
+                  }}
+                >
+                  <FontAwesomeIcon icon={faEye} className="mr-2" />
+                  View Merged PDF
+                </button>
+                <button
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const sessionId = session?._id || session?.id || 
+                                    result.assessmentSession?._id || 
+                                    result.assessmentSession?.id ||
+                                    (typeof result.assessmentSession === 'string' ? result.assessmentSession : null);
+                    
+                    console.log('⬇️ [Download] Extracted Session ID:', sessionId);
+                    
+                    if (sessionId) {
+                      await handleDownloadMergedPDF(sessionId);
+                    } else {
+                      console.error('❌ No session ID found');
+                      toast.error('No assessment session ID found');
+                    }
+                    setMergedPdfDropdownOpen(prev => ({
+                      ...prev,
+                      [result._id]: false
+                    }));
+                  }}
+                >
+                  <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                  Download Merged PDF
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center">
+            <span className="text-xs text-gray-400">
+              {!session ? 'No Assessment' : 'Assessment Pending'}
+            </span>
+          </div>
+        )}
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap md:px-6 md:py-4">
         <div className="flex flex-col gap-2">
           {/* Proceed to Second Round Button */}
           <motion.button
@@ -1122,15 +2571,25 @@ function CandidateTable() {
             onClick={async (e) => {
               e.stopPropagation();
               try {
-                // Use the assessment session ID directly instead of looking up scheduled test
+                // Navigate to Candidate Details Page for interview workflow
+                console.log('Candidate data for navigation:', {
+                  result: result,
+                  assessmentSession: result.assessmentSession,
+                  resumeData: resumeData
+                });
+                
+                // The correct navigation should use the assessment session ID for both parameters
+                // as the backend expects assessmentSessionId for both
                 if (result.assessmentSession && result.assessmentSession._id) {
-                  // Navigate directly to the assessment session details
-                  window.location.href = `/dashboard/assessment-session/${result.assessmentSession._id}`;
+                  console.log('Navigating to candidate details:', {
+                    assessmentSessionId: result.assessmentSession._id
+                  });
+                  navigate(`/dashboard/candidate-details/${result.assessmentSession._id}/${result.assessmentSession._id}`);
                 } else {
                   toast.error('No assessment session found for this candidate');
                 }
               } catch (error) {
-                console.error('Error navigating to assessment session:', error);
+                console.error('Error navigating to candidate details:', error);
                 toast.error('Failed to navigate to candidate details');
               }
             }}
@@ -1226,7 +2685,11 @@ function CandidateTable() {
         </motion.button>
       </td>
       <td className="px-4 py-3 whitespace-nowrap md:px-6 md:py-4">
-        {getStatusBadge()}
+        <CandidateStatusBadge 
+          session={session} 
+          assessmentSessionId={result.assessmentSession?._id} 
+          candidateDecisions={candidateDecisions} 
+        />
       </td>
       <td className="px-4 py-3 whitespace-nowrap md:px-6 md:py-4">
         {testScore ? (
@@ -1309,12 +2772,12 @@ function CandidateTable() {
         {!session || session.status === 'pending' ? (
           <motion.button
             className="btn-primary px-3 py-2 text-xs font-medium md:px-4 md:py-2 md:text-sm"
-            onClick={() => sendTestLink(
+            onClick={() => handleAssessmentSelection({
               email,
-              resumeData["Job Title"],
-              result.resumeId?._id,
-              result.jobDescriptionId?._id
-            )}
+              jobTitle: resumeData["Job Title"],
+              resumeId: result.resumeId?._id,
+              jdId: result.jobDescriptionId?._id
+            })}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -1330,7 +2793,7 @@ function CandidateTable() {
       </td>
       <td className="px-4 py-3 whitespace-nowrap md:px-6 md:py-4">
         <div className="flex flex-wrap gap-2">
-          {/* Recording Actions - Animated Section */}
+          {/* Enhanced Video Recordings Section with Modal View */}
           <div className="w-full">
             <motion.button
               className="btn-modern bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-blue-200 p-2 flex items-center gap-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 w-full justify-center"
@@ -1342,7 +2805,7 @@ function CandidateTable() {
               whileTap={{ scale: 0.98 }}
             >
               <FontAwesomeIcon icon={faVideo} className="text-white" />
-              <span className="text-xs font-medium">View Recordings</span>
+              <span className="text-xs font-medium">Media Center</span>
               <FontAwesomeIcon 
                 icon={recordingsDropdownOpen[result._id] ? faChevronUp : faChevronDown} 
                 className="text-xs transition-transform duration-200"
@@ -1358,186 +2821,229 @@ function CandidateTable() {
                   transition={{ duration: 0.3 }}
                   className="mt-2 recording-section"
                 >
-                  <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                    <div className="recording-section-header">
-                      <h3>Media Recordings</h3>
-                      <p>View or download candidate recordings</p>
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+                    <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3">
+                      <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                        <FontAwesomeIcon icon={faVideo} />
+                        Media Recordings
+                      </h3>
+                      <p className="text-blue-100 text-xs">View or download candidate recordings</p>
                     </div>
                     
-                    <div className="p-2 max-h-80 overflow-y-auto">
+                    <div className="p-3 max-h-80 overflow-y-auto">
+                      {/* Video Recording */}
                       {result.assessmentSession?.recording?.videoPath && (
-                        <div className="recording-item-row">
-                          <div className="recording-item-info">
-                            <div className="recording-item-icon bg-blue-100">
+                        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg mb-2 border border-blue-200">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                               <FontAwesomeIcon icon={faVideo} className="text-blue-600" />
                             </div>
-                            <div className="recording-item-details">
-                              <div className="recording-item-title">Video Recording</div>
-                              <div className="recording-item-subtitle">Face Camera</div>
+                            <div>
+                              <div className="font-medium text-sm text-gray-900">Face Camera Recording</div>
+                              <div className="text-xs text-gray-500">Assessment video recording</div>
                             </div>
                           </div>
-                          <div className="recording-item-actions">
-                            <button
-                              className="recording-action-btn recording-action-btn-view"
-                              onClick={() => viewVideo('video', result.assessmentSession.recording.videoPath)}
+                          <div className="flex gap-2">
+                            <motion.button
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors duration-200"
+                              onClick={() => {
+                                const videoUrl = `/api/recordings/video/${extractFileKey(result.assessmentSession.recording.videoPath)}`;
+                                window.open(videoUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+                              }}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                               disabled={mediaOperations.video?.viewing}
-                              title="View Video"
                             >
                               {mediaOperations.video?.viewing ? (
-                                <FontAwesomeIcon icon={faSpinner} spin />
+                                <FontAwesomeIcon icon={faSpinner} spin className="mr-1" />
                               ) : (
-                                <FontAwesomeIcon icon={faEye} />
+                                <FontAwesomeIcon icon={faEye} className="mr-1" />
                               )}
-                            </button>
-                            <button
-                              className="recording-action-btn recording-action-btn-download"
+                              View
+                            </motion.button>
+                            <motion.button
+                              className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors duration-200"
                               onClick={() => downloadVideo('video', result.assessmentSession.recording.videoPath)}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                               disabled={mediaOperations.video?.downloading}
-                              title="Download Video"
                             >
                               {mediaOperations.video?.downloading ? (
-                                <FontAwesomeIcon icon={faSpinner} spin />
+                                <FontAwesomeIcon icon={faSpinner} spin className="mr-1" />
                               ) : (
-                                <FontAwesomeIcon icon={faDownload} />
+                                <FontAwesomeIcon icon={faDownload} className="mr-1" />
                               )}
-                            </button>
+                              Download
+                            </motion.button>
                           </div>
                         </div>
                       )}
                       
+                      {/* Screen Recording */}
                       {result.assessmentSession?.recording?.screenPath && (
-                        <div className="recording-item-row">
-                          <div className="recording-item-info">
-                            <div className="recording-item-icon bg-purple-100">
+                        <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg mb-2 border border-purple-200">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
                               <FontAwesomeIcon icon={faDesktop} className="text-purple-600" />
                             </div>
-                            <div className="recording-item-details">
-                              <div className="recording-item-title">Screen Recording</div>
-                              <div className="recording-item-subtitle">Screen Share</div>
+                            <div>
+                              <div className="font-medium text-sm text-gray-900">Screen Recording</div>
+                              <div className="text-xs text-gray-500">Screen share recording</div>
                             </div>
                           </div>
-                          <div className="recording-item-actions">
-                            <button
-                              className="recording-action-btn recording-action-btn-view"
-                              onClick={() => viewVideo('screen', result.assessmentSession.recording.screenPath)}
+                          <div className="flex gap-2">
+                            <motion.button
+                              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-medium transition-colors duration-200"
+                              onClick={() => {
+                                const screenUrl = `/api/recordings/screen/${extractFileKey(result.assessmentSession.recording.screenPath)}`;
+                                window.open(screenUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+                              }}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                               disabled={mediaOperations.screen?.viewing}
-                              title="View Screen"
                             >
                               {mediaOperations.screen?.viewing ? (
-                                <FontAwesomeIcon icon={faSpinner} spin />
+                                <FontAwesomeIcon icon={faSpinner} spin className="mr-1" />
                               ) : (
-                                <FontAwesomeIcon icon={faEye} />
+                                <FontAwesomeIcon icon={faEye} className="mr-1" />
                               )}
-                            </button>
-                            <button
-                              className="recording-action-btn recording-action-btn-download"
+                              View
+                            </motion.button>
+                            <motion.button
+                              className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors duration-200"
                               onClick={() => downloadVideo('screen', result.assessmentSession.recording.screenPath)}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                               disabled={mediaOperations.screen?.downloading}
-                              title="Download Screen"
                             >
                               {mediaOperations.screen?.downloading ? (
-                                <FontAwesomeIcon icon={faSpinner} spin />
+                                <FontAwesomeIcon icon={faSpinner} spin className="mr-1" />
                               ) : (
-                                <FontAwesomeIcon icon={faDownload} />
+                                <FontAwesomeIcon icon={faDownload} className="mr-1" />
                               )}
-                            </button>
+                              Download
+                            </motion.button>
                           </div>
                         </div>
                       )}
                       
+                      {/* Audio Recording */}
                       {result.assessmentSession?.recording?.audioPath && (
-                        <div className="recording-item-row">
-                          <div className="recording-item-info">
-                            <div className="recording-item-icon bg-green-100">
+                        <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg mb-2 border border-green-200">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                               <FontAwesomeIcon icon={faMicrophone} className="text-green-600" />
                             </div>
-                            <div className="recording-item-details">
-                              <div className="recording-item-title">Audio Recording</div>
-                              <div className="recording-item-subtitle">Voice Recording</div>
+                            <div>
+                              <div className="font-medium text-sm text-gray-900">Audio Recording</div>
+                              <div className="text-xs text-gray-500">Voice recording</div>
                             </div>
                           </div>
-                          <div className="recording-item-actions">
-                            <button
-                              className="recording-action-btn recording-action-btn-view"
+                          <div className="flex gap-2">
+                            <motion.button
+                              className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors duration-200"
                               onClick={() => viewAudio(result.assessmentSession.recording.audioPath, 0)}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                               disabled={mediaOperations.audio?.[0]?.viewing}
-                              title="View Audio"
                             >
                               {mediaOperations.audio?.[0]?.viewing ? (
-                                <FontAwesomeIcon icon={faSpinner} spin />
+                                <FontAwesomeIcon icon={faSpinner} spin className="mr-1" />
                               ) : (
-                                <FontAwesomeIcon icon={faPlayCircle} />
+                                <FontAwesomeIcon icon={faPlayCircle} className="mr-1" />
                               )}
-                            </button>
-                            <button
-                              className="recording-action-btn recording-action-btn-download"
+                              Play
+                            </motion.button>
+                            <motion.button
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors duration-200"
                               onClick={() => downloadAudio(result.assessmentSession.recording.audioPath, 0)}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                               disabled={mediaOperations.audio?.[0]?.downloading}
-                              title="Download Audio"
                             >
                               {mediaOperations.audio?.[0]?.downloading ? (
-                                <FontAwesomeIcon icon={faSpinner} spin />
+                                <FontAwesomeIcon icon={faSpinner} spin className="mr-1" />
                               ) : (
-                                <FontAwesomeIcon icon={faDownload} />
+                                <FontAwesomeIcon icon={faDownload} className="mr-1" />
                               )}
-                            </button>
+                              Download
+                            </motion.button>
                           </div>
                         </div>
                       )}
                       
+                      {/* No recordings message */}
                       {!result.assessmentSession?.recording?.videoPath && 
                        !result.assessmentSession?.recording?.screenPath && 
                        !result.assessmentSession?.recording?.audioPath && (
-                        <div className="no-recordings-message">
-                          <FontAwesomeIcon icon={faVideo} className="no-recordings-icon" />
-                          <p>No video or audio recordings available</p>
+                        <div className="text-center py-8">
+                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <FontAwesomeIcon icon={faVideo} className="text-gray-400 text-xl" />
+                          </div>
+                          <p className="text-gray-500 text-sm font-medium">No recordings available</p>
+                          <p className="text-gray-400 text-xs">Assessment recordings will appear here</p>
                         </div>
                       )}
                     </div>
                   </div>
                   
-                  {/* Voice Answers Section */}
+                  {/* Enhanced Voice Answers Section */}
                   {result.assessmentSession?.voiceAnswers && result.assessmentSession.voiceAnswers.length > 0 && (
-                    <div className="voice-answers-section">
-                      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="voice-answers-header">
-                          <h3>Voice Answers</h3>
-                          <p>{result.assessmentSession.voiceAnswers.length} recorded responses</p>
+                    <div className="mt-3">
+                      <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+                        <div className="bg-gradient-to-r from-green-500 to-teal-600 p-3">
+                          <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                            <FontAwesomeIcon icon={faMicrophone} />
+                            Voice Answers
+                          </h3>
+                          <p className="text-green-100 text-xs">{result.assessmentSession.voiceAnswers.length} recorded responses</p>
                         </div>
                         
-                        <div className="p-2 max-h-80 overflow-y-auto">
+                        <div className="p-3 max-h-80 overflow-y-auto">
                           {result.assessmentSession.voiceAnswers.map((answer, index) => (
                             answer.audioPath && (
-                              <div key={index} className="voice-answer-item">
-                                <div className="voice-answer-info">
-                                  <div className="voice-answer-title truncate">Q{index + 1}: {answer.question?.substring(0, 40) || 'Audio Answer'}{answer.question && answer.question.length > 40 ? '...' : ''}</div>
-                                  <div className="voice-answer-subtitle truncate">Click to play or download</div>
+                              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2 border border-gray-200">
+                                <div className="flex items-center gap-3 flex-1">
+                                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <span className="text-green-600 font-semibold text-xs">Q{index + 1}</span>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-sm text-gray-900 truncate">
+                                      {answer.question?.substring(0, 50) || `Voice Answer ${index + 1}`}
+                                      {answer.question && answer.question.length > 50 ? '...' : ''}
+                                    </div>
+                                    <div className="text-xs text-gray-500">Click to play or download</div>
+                                  </div>
                                 </div>
-                                <div className="voice-answer-actions">
-                                  <button
-                                    className="recording-action-btn recording-action-btn-view"
+                                <div className="flex gap-2 flex-shrink-0">
+                                  <motion.button
+                                    className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors duration-200"
                                     onClick={() => viewAudio(answer.audioPath, index)}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
                                     disabled={mediaOperations.audio?.[index]?.viewing}
-                                    title={`Play Answer ${index + 1}`}
                                   >
                                     {mediaOperations.audio?.[index]?.viewing ? (
-                                      <FontAwesomeIcon icon={faSpinner} spin />
+                                      <FontAwesomeIcon icon={faSpinner} spin className="mr-1" />
                                     ) : (
-                                      <FontAwesomeIcon icon={faPlayCircle} />
+                                      <FontAwesomeIcon icon={faPlayCircle} className="mr-1" />
                                     )}
-                                  </button>
-                                  <button
-                                    className="recording-action-btn recording-action-btn-download"
+                                    Play
+                                  </motion.button>
+                                  <motion.button
+                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors duration-200"
                                     onClick={() => downloadAudio(answer.audioPath, index)}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
                                     disabled={mediaOperations.audio?.[index]?.downloading}
-                                    title={`Download Answer ${index + 1}`}
                                   >
                                     {mediaOperations.audio?.[index]?.downloading ? (
-                                      <FontAwesomeIcon icon={faSpinner} spin />
+                                      <FontAwesomeIcon icon={faSpinner} spin className="mr-1" />
                                     ) : (
-                                      <FontAwesomeIcon icon={faDownload} />
+                                      <FontAwesomeIcon icon={faDownload} className="mr-1" />
                                     )}
-                                  </button>
+                                    Download
+                                  </motion.button>
                                 </div>
                               </div>
                             )
@@ -1573,228 +3079,433 @@ function CandidateTable() {
           exit={{ opacity: 0, height: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <td colSpan="12" className="px-0 py-0">
+          <td colSpan="14" className="px-0 py-0">
             <motion.div 
-              className="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 rounded-lg border border-blue-100"
+              className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100 shadow-sm"
               initial={{ y: -20 }}
               animate={{ y: 0 }}
               transition={{ duration: 0.3, delay: 0.1 }}
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
-                {/* Contact Information - Compact Design */}
-                <div className="bg-white p-3 rounded-md border border-gray-200">
-                  <h6 className="text-md font-semibold text-gray-900 border-b border-gray-200 pb-1 mb-2">
-                    Contact Information
-                  </h6>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-700 text-xs min-w-[80px]">Mobile:</span>
-                      <span className="text-gray-900 text-xs">{resumeData.mobile_number || "N/A"}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-700 text-xs min-w-[80px]">Email:</span>
-                      {resumeData.email ? (
-                        <span className="badge badge-primary text-xs px-2 py-0.5">
-                          {resumeData.email}
-                        </span>
-                      ) : (
-                        <span className="text-gray-500 text-xs">N/A</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-700 text-xs min-w-[80px]">Consent:</span>
-                      {result.candidateConsent?.allowedToShare ? (
-                        <span className="badge badge-success text-xs px-2 py-0.5">
-                          Shared
-                        </span>
-                      ) : (
-                        <span className="badge badge-warning text-xs px-2 py-0.5">
-                          Not Shared
-                        </span>
-                      )}
-                    </div>
+              <div className="flex flex-col gap-3 max-w-4xl mx-auto">
+                {/* Contact Information Card */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+                  <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-3 py-2">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <FontAwesomeIcon icon={faUserTie} />
+                      Contact Information
+                    </h3>
                   </div>
-                </div>
-                
-                {/* Professional Details - Compact Design */}
-                <div className="bg-white p-3 rounded-md border border-gray-200">
-                  <h6 className="text-md font-semibold text-gray-900 border-b border-gray-200 pb-1 mb-2">
-                    Professional Details
-                  </h6>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-700 text-xs min-w-[80px]">Designation:</span>
-                      <span className="text-gray-900 text-xs">
-                        {(Array.isArray(resumeData.designation) 
-                          ? resumeData.designation.join(", ") 
-                          : resumeData.designation) || "N/A"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-700 text-xs min-w-[80px]">Degree:</span>
-                      <span className="text-gray-900 text-xs">
-                        {(Array.isArray(resumeData.degree) 
-                          ? resumeData.degree.join(", ") 
-                          : resumeData.degree) || "N/A"}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="font-medium text-gray-700 text-xs">Certifications:</span>
-                      <div className="ml-0 text-xs">
-                        {renderListWithExpand(resumeData.certifications || [], index, "certifications")}
+                  <div className="p-3">
+                    <div className="space-y-3">
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
+                          <FontAwesomeIcon icon={faMobile} className="text-blue-600 text-xs" />
+                        </div>
+                        <div className="ml-2">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Mobile</p>
+                          <p className="text-xs font-medium text-gray-900 mt-1">{resumeData.mobile_number || "N/A"}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
+                          <FontAwesomeIcon icon={faEnvelope} className="text-blue-600 text-xs" />
+                        </div>
+                        <div className="ml-2">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Email</p>
+                          <p className="text-xs font-medium text-gray-900 mt-1 break-all">{resumeData.email || "N/A"}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
+                          <FontAwesomeIcon icon={faShieldAlt} className="text-blue-600 text-xs" />
+                        </div>
+                        <div className="ml-2">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Consent Status</p>
+                          <div className="mt-1">
+                            {result.candidateConsent?.allowedToShare ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
+                                Shared
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
+                                Not Shared
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
                 
-                {/* Skills - Compact Design */}
-                <div className="bg-white p-3 rounded-md border border-gray-200">
-                  <h6 className="text-md font-semibold text-gray-900 border-b border-gray-200 pb-1 mb-2">
-                    Skills
-                  </h6>
-                  <div className="flex flex-wrap gap-1">
-                    {resumeData.skills?.length ? (
-                      resumeData.skills.map((skill, i) => (
-                        <span key={i} className="badge badge-info text-xs px-2 py-0.5">
-                          {skill}
-                        </span>
-                      ))
+                {/* Professional Details Card */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+                  <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-3 py-2">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <FontAwesomeIcon icon={faBriefcase} />
+                      Professional Details
+                    </h3>
+                  </div>
+                  <div className="p-3">
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Designation</p>
+                        <p className="text-xs font-medium text-gray-900 mt-1">
+                          {(Array.isArray(resumeData.designation) 
+                            ? resumeData.designation.join(", ") 
+                            : resumeData.designation) || "N/A"}
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Degree</p>
+                        <p className="text-xs font-medium text-gray-900 mt-1">
+                          {(Array.isArray(resumeData.degree) 
+                            ? resumeData.degree.join(", ") 
+                            : resumeData.degree) || "N/A"}
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Certifications</p>
+                        <div className="mt-1">
+                          {resumeData.certifications?.length ? (
+                            <div className="flex flex-wrap gap-1">
+                              {resumeData.certifications.map((cert, i) => (
+                                <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                  {cert}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-500">No certifications listed</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Skills Card */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+                  <div className="bg-gradient-to-r from-purple-500 to-pink-600 px-3 py-2">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <FontAwesomeIcon icon={faTools} />
+                      Skills
+                    </h3>
+                  </div>
+                  <div className="p-3">
+                    <div className="flex flex-wrap gap-1">
+                      {resumeData.skills?.length ? (
+                        resumeData.skills.map((skill, i) => (
+                          <span key={i} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border border-purple-200">
+                            {skill}
+                          </span>
+                        ))
+                      ) : (
+                        <p className="text-xs text-gray-500">No skills listed</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Previous Companies Card */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+                  <div className="bg-gradient-to-r from-green-500 to-teal-600 px-3 py-2">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <FontAwesomeIcon icon={faBuilding} />
+                      Previous Companies
+                    </h3>
+                  </div>
+                  <div className="p-3">
+                    {resumeData.company_names?.length ? (
+                      <div className="flex flex-wrap gap-1">
+                        {resumeData.company_names.map((company, i) => (
+                          <span key={i} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-green-100 to-teal-100 text-green-800 border border-green-200">
+                            {company}
+                          </span>
+                        ))}
+                      </div>
                     ) : (
-                      <span className="text-gray-500 text-xs">No skills available</span>
+                      <p className="text-xs text-gray-500">No previous companies listed</p>
                     )}
                   </div>
                 </div>
                 
-                {/* Previous Companies - Compact Design */}
-                <div className="bg-white p-3 rounded-md border border-gray-200">
-                  <h6 className="text-md font-semibold text-gray-900 border-b border-gray-200 pb-1 mb-2">
-                    Previous Companies
-                  </h6>
-                  <div className="text-xs compact-list">
-                    {renderListWithExpand(resumeData.company_names || [], index, "company_names")}
+                {/* Experience Card */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+                  <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-3 py-2">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <FontAwesomeIcon icon={faGraduationCap} />
+                      Work Experience
+                    </h3>
+                  </div>
+                  <div className="p-3">
+                    {resumeData.total_experience?.length ? (
+                      <div className="space-y-3">
+                        {resumeData.total_experience.map((exp, i) => (
+                          <div key={i} className="border border-gray-200 rounded-md p-3 hover:bg-gray-50 transition-colors">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="text-xs font-semibold text-gray-900">{exp.role || "N/A"}</h4>
+                                <p className="text-xs text-gray-600 mt-1">{exp.company || "N/A"}</p>
+                              </div>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                {exp.duration || "N/A"}
+                              </span>
+                            </div>
+                            
+                            {exp.responsibilities?.length > 0 && (
+                              <div className="mt-2">
+                                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Responsibilities</p>
+                                <ul className="mt-1 space-y-1">
+                                  {exp.responsibilities.slice(0, 3).map((resp, j) => (
+                                    <li key={j} className="flex items-start">
+                                      <FontAwesomeIcon icon={faCircle} className="text-gray-400 text-xs mt-1 mr-1 flex-shrink-0" />
+                                      <span className="text-xs text-gray-700">{resp}</span>
+                                    </li>
+                                  ))}
+                                  {exp.responsibilities.length > 3 && (
+                                    <li 
+                                      className="text-xs text-blue-600 font-medium cursor-pointer hover:text-blue-800"
+                                      onClick={() => toggleExpand(`${i}-${result._id}`, 'responsibilities')}
+                                    >
+                                      {expandedLists[`${i}-${result._id}-responsibilities`] 
+                                        ? "Show Less" 
+                                        : `+ ${exp.responsibilities.length - 3} more responsibilities`}
+                                    </li>
+                                  )}
+                                </ul>
+                                {expandedLists[`${i}-${result._id}-responsibilities`] && (
+                                  <ul className="mt-1 space-y-1">
+                                    {exp.responsibilities.slice(3).map((resp, j) => (
+                                      <li key={`${j}-expanded`} className="flex items-start">
+                                        <FontAwesomeIcon icon={faCircle} className="text-gray-400 text-xs mt-1 mr-1 flex-shrink-0" />
+                                        <span className="text-xs text-gray-700">{resp}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500">No work experience listed</p>
+                    )}
                   </div>
                 </div>
-              </div>
-              
-              {/* View Recordings section moved to main table column */}
-              
-              {/* Voice Answers section moved to main table column */}
-              
-              {/* Experience Section - Compact Design */}
-              <div className="mt-2 bg-white p-3 rounded-md border border-gray-200">
-                <h6 className="text-md font-semibold text-gray-900 border-b border-gray-200 pb-1 mb-2">
-                  Experience
-                </h6>
-                <div className="space-y-2">
-                {resumeData.total_experience?.length ? (
-  resumeData.total_experience.map((exp, i) => (
-    <div key={i} className="experience-card p-2 rounded border border-gray-200">
-      <div className="experience-grid gap-2">
-        <div>
-          <div className="experience-detail">
-            <span className="experience-label text-xs">Role:</span>
-            <span className="experience-value text-xs">{exp.role || "N/A"}</span>
-          </div>
-          <div className="experience-detail">
-            <span className="experience-label text-xs">Company:</span>
-            <span className="experience-value text-xs">{exp.company || "N/A"}</span>
-          </div>
-          <div className="experience-detail">
-            <span className="experience-label text-xs">Duration:</span>
-            <span className="experience-value text-xs">{exp.duration || "N/A"}</span>
-          </div>
-        </div>
-        <div>
-          <div className="space-y-1">
-            <span className="experience-label text-xs">Responsibilities:</span>
-            <div className="ml-0 compact-list text-xs">
-              {renderListWithExpand(exp.responsibilities || [], index, `responsibilities-${i}`, 2)}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  ))
-) : (
-  <span className="text-gray-500 text-xs">No experience available</span>
-)}
-                </div>
-              </div>
-              
-              {/* Analysis Section - Compact Design */}
-              <div className="mt-2 bg-white p-3 rounded-md border border-gray-200">
-                <h6 className="text-md font-semibold text-gray-900 border-b border-gray-200 pb-1 mb-2">
-                  Analysis
-                </h6>
-                <div className="analysis-grid gap-1.5">
-                  {/* Skills Analysis */}
-                  <div className="space-y-2">
-                    <div className="space-y-1">
-                      <div>
-                        <span className="skill-analysis-title text-xs">Matched Skills:</span>
-                        <div className="ml-0 compact-list text-xs">
-                          {renderListWithExpand(analysis["Matched Skills"] || [], index, "matchedSkills")}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="skill-analysis-title text-xs">Unmatched Skills:</span>
-                        <div className="ml-0 compact-list text-xs">
-                          {renderListWithExpand(analysis["Unmatched Skills"] || [], index, "unmatchedSkills")}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="skill-analysis-title text-xs">Strengths:</span>
-                        <div className="ml-0 compact-list text-xs">
-                          {renderListWithExpand(analysis.Strengths || [], index, "strengths")}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 
-                  {/* Scores and Metrics */}
-                  <div className="space-y-2">
-                    <div className="bg-gradient-to-r from-green-50 to-blue-50 p-2 rounded border border-gray-200">
-                      <div className="space-y-1">
-                        <div className="analysis-metric">
-                          <span className="analysis-label text-xs">Matching Score:</span>
-                          <span className="analysis-value text-xs">{analysis["Matching Score"] || "N/A"}</span>
+                {/* Analysis Card */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+                  <div className="bg-gradient-to-r from-red-500 to-rose-600 px-3 py-2">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <FontAwesomeIcon icon={faChartLine} />
+                      Analysis
+                    </h3>
+                  </div>
+                  <div className="p-3">
+                    <div className="space-y-4">
+                      {/* Matching Score */}
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Matching Score</p>
+                          <span className="text-xs font-bold text-gray-900">{analysis["Matching Score"] || "N/A"}</span>
                         </div>
-                        <div className="analysis-metric">
-                          <span className="analysis-label text-xs">Matched Skills %:</span>
-                          <span className="analysis-value analysis-score-positive text-xs">{analysis["Matched Skills Percentage"] || 0}%</span>
+                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                          <div 
+                            className="bg-gradient-to-r from-red-500 to-rose-600 h-1.5 rounded-full" 
+                            style={{ width: `${analysis["Matching Score"] || 0}%` }}
+                          ></div>
                         </div>
-                        <div className="analysis-metric">
-                          <span className="analysis-label text-xs">Unmatched Skills %:</span>
-                          <span className="analysis-value analysis-score-negative text-xs">{analysis["Unmatched Skills Percentage"] || 0}%</span>
+                      </div>
+                      
+                      {/* Skills Breakdown */}
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Skills Breakdown</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-green-50 rounded-md p-2 border border-green-200">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-medium text-green-800">Matched</span>
+                              <span className="text-xs font-bold text-green-900">{analysis["Matched Skills Percentage"] || 0}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
+                              <div 
+                                className="bg-green-500 h-1 rounded-full" 
+                                style={{ width: `${analysis["Matched Skills Percentage"] || 0}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-rose-50 rounded-md p-2 border border-rose-200">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-medium text-rose-800">Unmatched</span>
+                              <span className="text-xs font-bold text-rose-900">{analysis["Unmatched Skills Percentage"] || 0}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
+                              <div 
+                                className="bg-rose-500 h-1 rounded-full" 
+                                style={{ width: `${analysis["Unmatched Skills Percentage"] || 0}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Matched Skills */}
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Matched Skills</p>
+                        <div className="flex flex-wrap gap-1">
+                          {analysis["Matched Skills"]?.length ? (
+                            analysis["Matched Skills"].map((skill, i) => (
+                              <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                {skill}
+                              </span>
+                            ))
+                          ) : (
+                            <p className="text-xs text-gray-500">No matched skills</p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Unmatched Skills */}
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Unmatched Skills</p>
+                        <div className="flex flex-wrap gap-1">
+                          {analysis["Unmatched Skills"]?.length ? (
+                            analysis["Unmatched Skills"].map((skill, i) => (
+                              <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-800">
+                                {skill}
+                              </span>
+                            ))
+                          ) : (
+                            <p className="text-xs text-gray-500">No unmatched skills</p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Strengths */}
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Strengths</p>
+                        <div className="flex flex-wrap gap-1">
+                          {analysis.Strengths?.length ? (
+                            analysis.Strengths.map((strength, i) => (
+                              <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {strength}
+                              </span>
+                            ))
+                          ) : (
+                            <p className="text-xs text-gray-500">No strengths identified</p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Recommendations */}
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Recommendations</p>
+                        <div className="space-y-1">
+                          {analysis.Recommendations?.length ? (
+                            analysis.Recommendations.map((rec, i) => (
+                              <div key={i} className="flex items-start p-2 bg-blue-50 rounded-md border border-blue-200">
+                                <FontAwesomeIcon icon={faLightbulb} className="text-blue-500 text-xs mt-0.5 mr-1 flex-shrink-0" />
+                                <span className="text-xs text-gray-700">{rec}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-xs text-gray-500">No recommendations available</p>
+                          )}
                         </div>
                       </div>
                     </div>
-                    
-                    <div>
-                      <span className="skill-analysis-title text-xs">Recommendations:</span>
-                      <div className="ml-0 compact-list text-xs">
-                        {renderListWithExpand(analysis.Recommendations || [], index, "recommendations")}
+                  </div>
+                </div>
+                
+                {/* Experience Metrics Card */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+                  <div className="bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-2">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <FontAwesomeIcon icon={faUserClock} />
+                      Experience Metrics
+                    </h3>
+                  </div>
+                  <div className="p-3">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center pb-2 border-b border-gray-200">
+                        <div>
+                          <p className="text-xs font-medium text-gray-500">Required Industrial Experience</p>
+                          <p className="text-xs font-medium text-gray-900 mt-1">{analysis["Required Industrial Experience"] || "N/A"}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-medium text-gray-500">Candidate's Experience</p>
+                          <p className="text-xs font-medium text-gray-900 mt-1">{analysis["Candidate Industrial Experience"] || "N/A"}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-between items-center pb-2 border-b border-gray-200">
+                        <div>
+                          <p className="text-xs font-medium text-gray-500">Required Domain Experience</p>
+                          <p className="text-xs font-medium text-gray-900 mt-1">{analysis["Required Domain Experience"] || "N/A"}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-medium text-gray-500">Candidate's Experience</p>
+                          <p className="text-xs font-medium text-gray-900 mt-1">{analysis["Candidate Domain Experience"] || "N/A"}</p>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Compliance Status</p>
+                        <div>
+                          {analysis["Experience Threshold Compliance"] ? (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                              analysis["Experience Threshold Compliance"].includes("meet") 
+                                ? "bg-green-100 text-green-800" 
+                                : "bg-amber-100 text-amber-800"
+                            }`}>
+                              <FontAwesomeIcon 
+                                icon={analysis["Experience Threshold Compliance"].includes("meet") ? faCheck : faExclamationTriangle} 
+                                className="mr-1" 
+                              />
+                              {analysis["Experience Threshold Compliance"]}
+                            </span>
+                          ) : (
+                            <p className="text-xs text-gray-500">N/A</p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Recent Experience Relevance</p>
+                        <div>
+                          {analysis["Recent Experience Relevance"] ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800">
+                              {analysis["Recent Experience Relevance"]}
+                            </span>
+                          ) : (
+                            <p className="text-xs text-gray-500">N/A</p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    
-                    <div className="space-y-1 text-xs">
-                      <div className="analysis-metric">
-                        <span className="analysis-label text-xs">Required Industrial Experience:</span>
-                        <span className="analysis-value text-xs">{analysis["Required Industrial Experience"] || "N/A"}</span>
-                      </div>
-                      <div className="analysis-metric">
-                        <span className="analysis-label text-xs">Candidate Industrial Experience:</span>
-                        <span className="analysis-value text-xs">{analysis["Candidate Industrial Experience"] || "N/A"}</span>
-                      </div>
-                      <div className="analysis-metric">
-                        <span className="analysis-label text-xs">Required Domain Experience:</span>
-                        <span className="analysis-value text-xs">{analysis["Required Domain Experience"] || "N/A"}</span>
-                      </div>
-                      <div className="analysis-metric">
-                        <span className="analysis-label text-xs">Candidate Domain Experience:</span>
-                        <span className="analysis-value text-xs">{analysis["Candidate Domain Experience"] || "N/A"}</span>
-                      </div>
-                    </div>
+                  </div>
+                </div>
+                
+                {/* Analysis Summary Card */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+                  <div className="bg-gradient-to-r from-gray-600 to-gray-800 px-3 py-2">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <FontAwesomeIcon icon={faClipboardList} />
+                      Analysis Summary
+                    </h3>
+                  </div>
+                  <div className="p-3">
+                    <p className="text-xs text-gray-700">
+                      {analysis["Analysis Summary"] || "No analysis summary available"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1836,8 +3547,152 @@ function CandidateTable() {
             </div>
           </motion.div>
         </motion.div>
+        
+        {/* Custom Assessment Modal */}
+        <CustomAssessmentModal 
+          show={showCustomAssessmentModal}
+          onClose={() => setShowCustomAssessmentModal(false)}
+          candidateData={currentCandidate}
+          onSubmit={handleAssessmentSubmit}
+        />
+        
+        {/* Assessment Generation Modal */}
+        <AnimatePresence>
+          {showGenerationModal && (
+            <motion.div
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center"
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              >
+                {generationStatus.loading && (
+                  <>
+                    <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                      <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-3">Preparing Assessment</h3>
+                    <p className="text-gray-600 mb-6">{generationStatus.message || 'Processing your request...'}</p>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full animate-pulse" style={{width: '75%'}}></div>
+                    </div>
+                  </>
+                )}
+                {generationStatus.error && (
+                  <>
+                    <div className="w-20 h-20 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                      <FontAwesomeIcon icon={faExclamationTriangle} className="text-3xl text-red-600" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-red-600 mb-3">Error Occurred</h3>
+                    <p className="text-gray-600 mb-6">{generationStatus.error}</p>
+                    <motion.button 
+                      className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2 mx-auto"
+                      onClick={() => setShowGenerationModal(false)}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <FontAwesomeIcon icon={faTimes} />
+                      Close
+                    </motion.button>
+                  </>
+                )}
+                {generationStatus.success && (
+                  <>
+                    <div className="w-20 h-20 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                      <FontAwesomeIcon icon={faCheckCircle} className="text-3xl text-green-600" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-green-600 mb-3">Success!</h3>
+                    <p className="text-gray-600 mb-6">{generationStatus.message}</p>
+                    <motion.button 
+                      className="px-6 py-3 bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2 mx-auto shadow-md hover:shadow-lg"
+                      onClick={() => setShowGenerationModal(false)}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <FontAwesomeIcon icon={faCheck} />
+                      Got it!
+                    </motion.button>
+                  </>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        {/* 🔥 NEW: Floating Action Button for Bulk Merged Document Download */}
+        <AnimatePresence>
+          {selectedMergedDocs.size > 0 && (
+            <motion.div
+              className="fixed bottom-6 right-6 z-50"
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            >
+              <div className="bg-white rounded-lg shadow-2xl border border-gray-200 p-4 min-w-[280px]">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 bg-orange-gradient rounded-full flex items-center justify-center">
+                      <FontAwesomeIcon icon={faFilePdf} className="text-white text-sm" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 text-sm">
+                        Bulk Download Ready
+                      </h4>
+                      <p className="text-xs text-gray-500">
+                        {selectedMergedDocs.size} merged document{selectedMergedDocs.size !== 1 ? 's' : ''} selected
+                      </p>
+                    </div>
+                  </div>
+                  <motion.button
+                    onClick={() => {
+                      setSelectedMergedDocs(new Set());
+                      setIsAllMergedDocsSelected(false);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                  </motion.button>
+                </div>
+                
+                <div className="space-y-2">
+                  <motion.button
+                    onClick={handleBulkMergedDocsDownload}
+                    disabled={bulkDownloadInProgress}
+                    className="w-full bg-orange-gradient text-white py-2.5 px-4 rounded-lg font-medium text-sm hover:shadow-lg transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {bulkDownloadInProgress ? (
+                      <>
+                        <FontAwesomeIcon icon={faSpinner} spin className="w-4 h-4" />
+                        Creating ZIP...
+                      </>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faDownload} className="w-4 h-4" />
+                        Download ZIP File
+                      </>
+                    )}
+                  </motion.button>
+                  
+                  <div className="text-xs text-gray-500 text-center">
+                    Download will include candidate merged documents
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-  
   );
 }
 
