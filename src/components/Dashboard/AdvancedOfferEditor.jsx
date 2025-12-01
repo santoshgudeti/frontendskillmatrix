@@ -31,7 +31,9 @@ import {
   faInfoCircle,
   faLightbulb,
   faRocket,
-  faMagic
+  faMagic,
+  faUpload,
+  faFilePdf
 } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 import { axiosInstance } from '../../axiosUtils';
@@ -151,6 +153,12 @@ const RichTextEditor = ({ content, onChange, readOnly = false }) => {
         <div style="margin-top: 15px; font-size: 14px; opacity: 0.8;">
           <span>📧 hr@company.com</span> • <span>📞 +91-XXXXXXXXXX</span> • <span>🌐 www.company.com</span>
         </div>
+      </div>
+      <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+        <p style="margin: 0; color: #1976d2; font-weight: 500;">
+          <strong>ℹ️ Note:</strong> This is a placeholder for your company letterhead. 
+          When you generate the final PDF offer letter, your uploaded PDF letterhead will be automatically applied as the background.
+        </p>
       </div>
     `;
     document.execCommand('insertHTML', false, letterheadHTML);
@@ -525,7 +533,6 @@ const AdvancedOfferEditor = ({
   const [activeTab, setActiveTab] = useState('form');
   const [isLoading, setIsLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
-  const [showValidationAlert, setShowValidationAlert] = useState(false);
   const [salaryBreakdown, setSalaryBreakdown] = useState({
     earnings: [
       { name: 'Basic Salary', amount: 0 },
@@ -546,6 +553,14 @@ const AdvancedOfferEditor = ({
     { id: 'startup', name: 'Modern Startup', description: 'Contemporary tech company style' },
     { id: 'formal', name: 'Formal Traditional', description: 'Traditional business format' }
   ];
+
+  const [letterheadFile, setLetterheadFile] = useState(null);
+  const [letterheadUrl, setLetterheadUrl] = useState(null);
+  const [letterheadId, setLetterheadId] = useState(null);
+  const [letterheadPreviewUrl, setLetterheadPreviewUrl] = useState(null);
+  const [mergedPreviewUrl, setMergedPreviewUrl] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [hasLetterhead, setHasLetterhead] = useState(false);
 
   // Auto-populate form with candidate and assessment data
   useEffect(() => {
@@ -642,8 +657,8 @@ const AdvancedOfferEditor = ({
         offerData: offerData // Send current form data
       });
       
-      if (response.data.draftHtml) {
-        setOfferContent(response.data.draftHtml);
+      if (response.data.offerHtml) {
+        setOfferContent(response.data.offerHtml);
       }
     } catch (error) {
       console.error('Error loading offer draft:', error);
@@ -665,8 +680,8 @@ const AdvancedOfferEditor = ({
         offerData: offerData // Send current form data for real-time updates
       });
       
-      if (response.data.draftHtml) {
-        setOfferContent(response.data.draftHtml);
+      if (response.data.offerHtml) {
+        setOfferContent(response.data.offerHtml);
       }
     } catch (error) {
       console.error('Error updating offer content:', error);
@@ -674,22 +689,163 @@ const AdvancedOfferEditor = ({
     }
   };
 
+  // Letterhead upload function
+  const handleLetterheadUpload = async (file) => {
+    if (!file) return;
+    
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      toast.error('Please upload a PDF file only');
+      return;
+    }
+    
+    // Validate file size (2MB limit)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('File size exceeds 2MB limit');
+      return;
+    }
+    
+    setIsUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('letterhead', file);
+      
+      const response = await axiosInstance.post('/api/letterhead/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      setLetterheadUrl(response.data.data.s3Key);
+      setLetterheadId(response.data.data.id);
+      setLetterheadFile(file);
+      setHasLetterhead(true);
+      
+      // Generate preview URL
+      const previewUrl = await generateLetterheadPreview();
+      if (previewUrl) {
+        setLetterheadPreviewUrl(previewUrl);
+      }
+      
+      toast.success('Letterhead uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading letterhead:', error);
+      toast.error('Failed to upload letterhead');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Generate letterhead preview URL
+  const generateLetterheadPreview = async () => {
+    if (!letterheadId && !letterheadUrl) return null;
+    
+    try {
+      // Use letterheadId if available, otherwise use letterheadUrl (s3Key)
+      const idOrKey = letterheadId || letterheadUrl;
+      const response = await axiosInstance.get(`/api/letterhead/preview/${idOrKey}`);
+      return response.data.url;
+    } catch (error) {
+      console.error('Error generating letterhead preview:', error);
+      return null;
+    }
+  };
+
+  // Generate merged offer letter preview (letterhead + content)
+  const generateMergedPreview = async () => {
+    if (!offerContent) return null;
+    
+    try {
+      setIsLoading(true);
+      
+      // Send the current HTML content to be converted to PDF with letterhead
+      const response = await axiosInstance.post('/api/offers/preview', {
+        offerHtml: offerContent,
+        hasLetterhead: hasLetterhead,
+        letterheadUrl: letterheadUrl
+      }, {
+        responseType: 'blob'
+      });
+      
+      // Create a blob URL for preview
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const previewUrl = URL.createObjectURL(blob);
+      
+      return previewUrl;
+    } catch (error) {
+      console.error('Error generating merged preview:', error);
+      toast.error('Failed to generate preview');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Check for existing letterhead
+  useEffect(() => {
+    if (isOpen) {
+      checkExistingLetterhead();
+    }
+  }, [isOpen]);
+
+  const checkExistingLetterhead = async () => {
+    try {
+      const response = await axiosInstance.get('/api/letterhead/active');
+      if (response.data.data) {
+        setHasLetterhead(true);
+        setLetterheadUrl(response.data.data.s3Key);
+        setLetterheadId(response.data.data._id || response.data.data.id);
+        
+        // Generate preview URL for existing letterhead
+        const previewUrl = await generateLetterheadPreview();
+        if (previewUrl) {
+          setLetterheadPreviewUrl(previewUrl);
+        }
+      }
+    } catch (error) {
+      // No active letterhead found, which is fine
+      setHasLetterhead(false);
+    }
+  };
+
   const handleSave = async () => {
     // Validate form first
     if (!validateForm()) {
-      const missingFields = Object.values(validationErrors);
-      setShowValidationAlert(true);
+      const missingFields = Object.keys(validationErrors);
       
-      // Show alert with missing fields
-      const alertMessage = `Please fill in the following required fields:\n\n${missingFields.join('\n')}`;
+      // Show professional toast with list of missing fields
+      const fieldsList = missingFields.map(field => {
+        const fieldNames = {
+          candidateName: 'Candidate Name',
+          candidateEmail: 'Candidate Email',
+          position: 'Position/Job Title',
+          startDate: 'Start Date',
+          salary: 'Annual Salary (CTC)',
+          hrName: 'HR Name',
+          hrEmail: 'HR Email',
+          hrPhone: 'HR Phone',
+          companyName: 'Company Name'
+        };
+        return fieldNames[field] || field;
+      }).join(', ');
       
-      const userConfirmed = window.confirm(
-        `${alertMessage}\n\nDo you want to proceed anyway? (Not recommended)`
+      toast.error(
+        <div>
+          <div className="font-semibold mb-2">Please fill in the required fields:</div>
+          <div className="text-sm">{fieldsList}</div>
+        </div>,
+        {
+          position: 'top-center',
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        }
       );
       
-      if (!userConfirmed) {
-        return; // Don't proceed if user cancels
-      }
+      return; // Don't proceed if validation fails
     }
 
     try {
@@ -702,7 +858,8 @@ const AdvancedOfferEditor = ({
         jobTitle: offerData.position || assessmentData.jobTitle,
         offerContent,
         salaryBreakdown,
-        template: selectedTemplate
+        template: selectedTemplate,
+        letterheadUrl: hasLetterhead ? letterheadUrl : null
       };
 
       await onSave(offerPayload);
@@ -711,7 +868,7 @@ const AdvancedOfferEditor = ({
       onClose();
     } catch (error) {
       console.error('Error saving offer:', error);
-      toast.error('Failed to save offer letter');
+      toast.error('Failed to save offer letter. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -872,6 +1029,136 @@ const AdvancedOfferEditor = ({
           <div className="flex-1 overflow-auto">
             {activeTab === 'form' && (
               <div className="space-y-6">
+                {/* Letterhead Upload Section */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <FontAwesomeIcon icon={faFilePdf} className="text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Company Letterhead</h3>
+                      <p className="text-gray-600 text-sm">Upload your company letterhead PDF for branded offer letters</p>
+                      <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <p className="text-sm text-blue-700">
+                          <strong>How it works:</strong> Your uploaded letterhead will be automatically applied as the background when generating the final PDF offer letter. You won't see it in the HTML editor, but it will appear in the final PDF.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={(e) => handleLetterheadUpload(e.target.files[0])}
+                          className="hidden"
+                          id="letterhead-upload"
+                          disabled={isUploading}
+                        />
+                        <label 
+                          htmlFor="letterhead-upload" 
+                          className={`cursor-pointer flex flex-col items-center justify-center gap-3 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <FontAwesomeIcon icon={faUpload} className="text-blue-600 text-xl" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-700">
+                              {isUploading ? 'Uploading...' : 'Click to upload PDF'}
+                            </p>
+                            <p className="text-sm text-gray-500 mt-1">
+                              Max file size: 2MB
+                            </p>
+                          </div>
+                        </label>
+                      </div>
+                      
+                      {hasLetterhead && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <div className="flex items-center gap-2">
+                            <FontAwesomeIcon icon={faCheck} className="text-green-600" />
+                            <span className="text-green-800 font-medium">Letterhead uploaded successfully</span>
+                          </div>
+                          <p className="text-green-700 text-sm mt-1">
+                            Your offer letters will be automatically branded with your company letterhead when generating the final PDF.
+                          </p>
+                          <div className="mt-3 flex gap-2">
+                            <Button
+                              onClick={async () => {
+                                const previewUrl = await generateLetterheadPreview();
+                                if (previewUrl) {
+                                  window.open(previewUrl, '_blank');
+                                } else {
+                                  toast.error('Failed to generate preview');
+                                }
+                              }}
+                              variant="outline"
+                              className="text-green-700 border-green-300 hover:bg-green-100"
+                              size="sm"
+                            >
+                              <FontAwesomeIcon icon={faEye} className="mr-1" />
+                              Preview Letterhead
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 mb-2">Letterhead Requirements</h4>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        <li className="flex items-start gap-2">
+                          <FontAwesomeIcon icon={faCheck} className="text-green-500 mt-1 text-xs" />
+                          <span>PDF format only</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <FontAwesomeIcon icon={faCheck} className="text-green-500 mt-1 text-xs" />
+                          <span>Maximum file size: 2MB</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <FontAwesomeIcon icon={faCheck} className="text-green-500 mt-1 text-xs" />
+                          <span>Single page recommended</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <FontAwesomeIcon icon={faCheck} className="text-green-500 mt-1 text-xs" />
+                          <span>High resolution for best quality</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Letterhead Preview Section */}
+                {letterheadPreviewUrl && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <FontAwesomeIcon icon={faEye} className="text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">Letterhead Preview</h3>
+                        <p className="text-gray-600 text-sm">Your uploaded company letterhead</p>
+                      </div>
+                    </div>
+                    
+                    <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                      <iframe 
+                        src={`${letterheadPreviewUrl}#toolbar=0&zoom=85`} 
+                        className="w-full h-96"
+                        title="Letterhead Preview"
+                        frameBorder="0"
+                      />
+                    </div>
+                    
+                    <div className="mt-4 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                      <FontAwesomeIcon icon={faInfoCircle} className="text-blue-500 mr-2" />
+                      This letterhead will be automatically applied as the background when generating your final offer letter PDF.
+                    </div>
+                  </div>
+                )}
+                
                 <TemplateSelector
                   selectedTemplate={selectedTemplate}
                   onTemplateChange={setSelectedTemplate}
@@ -1192,7 +1479,7 @@ const AdvancedOfferEditor = ({
                 </div>
               </div>
             )}
-
+            
             {activeTab === 'editor' && (
               <div className="h-full">
                 <RichTextEditor
@@ -1262,23 +1549,49 @@ const AdvancedOfferEditor = ({
               )}
               
               {activeTab === 'preview' && (
-                <Button 
-                  onClick={handleSave} 
-                  disabled={isLoading}
-                  className="px-8 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold shadow-lg"
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <FontAwesomeIcon icon={faRocket} className="mr-2" />
-                      Send Professional Offer
-                    </>
-                  )}
-                </Button>
+                <>
+                  <Button 
+                    onClick={async () => {
+                      const previewUrl = await generateMergedPreview();
+                      if (previewUrl) {
+                        setMergedPreviewUrl(previewUrl);
+                        window.open(previewUrl, '_blank');
+                      }
+                    }}
+                    disabled={isLoading}
+                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faEye} className="mr-2" />
+                        Preview with Letterhead
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleSave} 
+                    disabled={isLoading}
+                    className="px-8 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold shadow-lg"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faRocket} className="mr-2" />
+                        Send Professional Offer
+                      </>
+                    )}
+                  </Button>
+                </>
               )}
             </div>
           </div>

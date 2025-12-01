@@ -9,6 +9,7 @@ import ResponseTable from "../Dashboard/ResponseTable";
 import AdminDashboard from "../ProfileSection/AdminDashboard";
 import AdminUserDetail from "../ProfileSection/AdminUserDetail";
 import UserProfile from "../ProfileSection/UserProfile";
+import LeadsManagement from "../ProfileSection/LeadsManagement";
 import ScheduleTestPage from '../ScheduledTest/ScheduleTestPage';
 import ScheduledTestsList from '../ScheduledTest/ScheduledTestsList';
 import ScheduledTestDetails from '../ScheduledTest/ScheduledTestDetails';
@@ -18,6 +19,7 @@ import History from './History';
 import CandidateDetailsPage from './CandidateDetailsPage';
 import DocumentCollectionDashboard from './DocumentCollection/DocumentCollectionDashboard';
 import TemplateManagement from './Templates/TemplateManagement';
+import IndustrialOfferLetterGenerator from './IndustrialOfferLetterGenerator';
 
 // Import new components for candidate assessment workflow
 
@@ -156,6 +158,9 @@ function Dashboard({ onLogout }) {
               {/* Admin Routes */}
               <Route path="admin/*" element={<AdminDashboard />} />
               <Route path="admin/users/:id" element={<AdminUserDetail />} />
+              
+              {/* Leads Management Route (Admin Only) */}
+              <Route path="leads" element={<LeadsManagement />} />
 
               {/* User Profile Route */}
               <Route path="user" element={<UserProfile />} />
@@ -165,6 +170,9 @@ function Dashboard({ onLogout }) {
               
               {/* Add this new route for template management */}
               <Route path="templates" element={<TemplateManagement />} />
+              
+              {/* Industrial-Grade Offer Letter Generator Route */}
+              <Route path="industrial-offer-generator" element={<IndustrialOfferLetterGenerator />} />
             </Routes>
           </div>
         </motion.main>

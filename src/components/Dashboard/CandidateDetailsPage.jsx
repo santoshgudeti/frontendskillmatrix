@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faArrowLeft, 
-  faUser, 
-  faEnvelope, 
-  faPhone, 
-  faFileAlt, 
-  faChartBar, 
-  faCalendarAlt, 
-  faDownload, 
+import {
+  faArrowLeft,
+  faUser,
+  faEnvelope,
+  faPhone,
+  faFileAlt,
+  faChartBar,
+  faCalendarAlt,
+  faDownload,
   faEye,
   faSpinner,
   faCheckCircle,
@@ -40,7 +40,7 @@ import {
   faPaperclip,
   faTimes
 } from '@fortawesome/free-solid-svg-icons';
-import { faGoogle as faGoogleBrand, faMicrosoft as faMicrosoftBrand} from '@fortawesome/free-brands-svg-icons';
+import { faGoogle as faGoogleBrand, faMicrosoft as faMicrosoftBrand } from '@fortawesome/free-brands-svg-icons';
 import { debouncedToast, documentToast, useEffectToast } from '../../utils/toastUtils';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -80,12 +80,12 @@ const CandidateDetailsPage = () => {
     isLoading: false,
     error: null
   });
-  
+
   // Derived state for backward compatibility
   const documentCollectionStatus = documentCollectionState.status;
   const documentCollection = documentCollectionState.collection;
   const documentCollectionId = documentCollectionState.collectionId;
-  
+
   // Legacy setters for backward compatibility
   const setDocumentCollectionStatus = (status) => {
     setDocumentCollectionState(prev => ({
@@ -94,7 +94,7 @@ const CandidateDetailsPage = () => {
       lastUpdate: Date.now()
     }));
   };
-  
+
   const setDocumentCollection = (collection) => {
     setDocumentCollectionState(prev => ({
       ...prev,
@@ -102,7 +102,7 @@ const CandidateDetailsPage = () => {
       lastUpdate: Date.now()
     }));
   };
-  
+
   const setDocumentCollectionId = (id) => {
     setDocumentCollectionState(prev => ({
       ...prev,
@@ -110,7 +110,7 @@ const CandidateDetailsPage = () => {
       lastUpdate: Date.now()
     }));
   };
-  
+
   // 🔥 CENTRALIZED DOCUMENT STATUS UPDATER: Single source of truth for all document status changes
   const updateDocumentCollectionState = useCallback((updates, source = 'unknown') => {
     console.log('📊 [STATE UPDATE] Centralized document status update:', {
@@ -119,7 +119,7 @@ const CandidateDetailsPage = () => {
       timestamp: new Date().toISOString(),
       currentState: documentCollectionState
     });
-    
+
     setDocumentCollectionState(prev => {
       const newState = {
         ...prev,
@@ -127,31 +127,31 @@ const CandidateDetailsPage = () => {
         lastUpdate: Date.now(),
         error: null // Clear any previous errors
       };
-      
+
       // Validate status transitions
       const validStatuses = ['unknown', 'requested', 'uploaded', 'verified', 'rejected'];
       if (updates.status && !validStatuses.includes(updates.status)) {
         console.warn('⚠️ [STATE UPDATE] Invalid status transition:', updates.status);
         return prev; // Don't update with invalid status
       }
-      
+
       console.log('✅ [STATE UPDATE] State updated successfully:', {
         previous: prev,
         new: newState,
         source,
         buttonShouldBeEnabled: newState.status === 'verified'
       });
-      
+
       // Trigger button state re-evaluation
       setLastRefresh(Date.now());
-      
+
       // Show appropriate notifications with deduplication
       if (updates.status === 'verified' && prev.status !== 'verified' && newState.collectionId) {
         documentToast.verified(newState.collectionId, candidateData?.name || displayName);
       } else if (updates.status === 'rejected' && prev.status !== 'rejected' && newState.collectionId) {
         documentToast.rejected(newState.collectionId, newState.rejectionReason || '');
       }
-      
+
       return newState;
     });
   }, [documentCollectionState]);
@@ -181,10 +181,10 @@ const CandidateDetailsPage = () => {
     // Fallback
     return 'Candidate';
   };
-  
+
   // Use either the displayName function or the name from candidateData
-  const displayName = candidateData?.name && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(candidateData.name) 
-    ? candidateData.name 
+  const displayName = candidateData?.name && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(candidateData.name)
+    ? candidateData.name
     : computeDisplayName(candidateData?.name, candidateData?.email);
 
   // Ensure an Interview exists server-side before opening feedback modal
@@ -194,22 +194,22 @@ const CandidateDetailsPage = () => {
       console.log('⚠️ Interview already ensured, skipping duplicate call');
       return { success: true, existed: true };
     }
-    
+
     try {
       console.log('[Interview] Ensuring interview exists for session:', {
         assessmentSessionId,
         candidateId
       });
-      
+
       const response = await axiosInstance.post('/api/interviews/ensure-by-session', {
         assessmentSessionId,
         candidateId,
       });
-      
+
       console.log('[Interview] Ensure interview response:', response.data);
       setInterviewEnsured(true); // 🔥 FIX: Mark as ensured
       return response.data;
-      
+
     } catch (error) {
       console.error('Failed to ensure interview:', error);
       console.error('Error details:', {
@@ -217,9 +217,9 @@ const CandidateDetailsPage = () => {
         data: error.response?.data,
         message: error.message
       });
-      
+
       let errorMessage = 'Unable to prepare interview record for feedback.';
-      
+
       if (error.response?.status === 404) {
         errorMessage = 'Assessment session not found. Please verify the candidate data.';
       } else if (error.response?.status === 400) {
@@ -227,7 +227,7 @@ const CandidateDetailsPage = () => {
       } else if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
       }
-      
+
       debouncedToast.error(`❌ ${errorMessage}`, 'interview-ensure-error');
       throw error;
     }
@@ -240,19 +240,19 @@ const CandidateDetailsPage = () => {
       console.log('⚠️ Interview already ensured, skipping status check');
       return;
     }
-    
+
     try {
       // Try to ensure interview exists and get its status
       const response = await axiosInstance.post('/api/interviews/ensure-by-session', {
         assessmentSessionId,
         candidateId,
       });
-      
+
       const interview = response.data.data;
-      
+
       if (interview && interview.status) {
         console.log('🗓️ Found existing interview with status:', interview.status);
-        
+
         // 🔥 FIX: Only update status if it's a meaningful status
         if (interview.status !== 'not-scheduled') {
           setInterviewStatus(interview.status);
@@ -260,7 +260,7 @@ const CandidateDetailsPage = () => {
           // Keep default 'not-scheduled' for proper workflow
           setInterviewStatus('not-scheduled');
         }
-        
+
         // If interview has feedback, update the feedback state
         if (interview.feedback) {
           setInterviewFeedback(prev => ({
@@ -273,9 +273,9 @@ const CandidateDetailsPage = () => {
             feedbackSubmitted: !!interview.feedback
           }));
         }
-        
+
         console.log('🔄 Interview status set to:', interview.status);
-        
+
         // 🔥 FIX: Mark as ensured to prevent future duplicate calls
         setInterviewEnsured(true);
       } else {
@@ -307,7 +307,7 @@ const CandidateDetailsPage = () => {
     const benefitsList = (offerData.benefits || '')
       .split('\n')
       .filter(Boolean)
-      .map((b) => `<li>${b}</li>`) 
+      .map((b) => `<li>${b}</li>`)
       .join('');
 
     // Simple INR words fallback
@@ -324,24 +324,24 @@ const CandidateDetailsPage = () => {
     // Use structured editor rows when present; otherwise estimate
     const gross = Number(String(offerData.salary || '').replace(/[^0-9.]/g, '')) || 0;
     const monthly = Math.round(gross / 12);
-    const ePairs = (earnings && earnings.length && earnings.some(r=>r.amount))
+    const ePairs = (earnings && earnings.length && earnings.some(r => r.amount))
       ? earnings.map(r => [r.name || '', Number(String(r.amount).replace(/[^0-9.]/g, '')) || 0])
       : [
-          ['Basic Wage', Math.round(monthly * 0.5)],
-          ['HRA', Math.round(monthly * 0.2)],
-          ['Conveyance Allowance', 1600],
-          ['Medical Allowances', 1250],
-          ['Other Allowances', Math.max(0, monthly - Math.round(monthly * 0.5) - Math.round(monthly * 0.2) - 1600 - 1250)],
-        ];
-    const dPairs = (deductions && deductions.length && deductions.some(r=>r.amount))
+        ['Basic Wage', Math.round(monthly * 0.5)],
+        ['HRA', Math.round(monthly * 0.2)],
+        ['Conveyance Allowance', 1600],
+        ['Medical Allowances', 1250],
+        ['Other Allowances', Math.max(0, monthly - Math.round(monthly * 0.5) - Math.round(monthly * 0.2) - 1600 - 1250)],
+      ];
+    const dPairs = (deductions && deductions.length && deductions.some(r => r.amount))
       ? deductions.map(r => [r.name || '', Number(String(r.amount).replace(/[^0-9.]/g, '')) || 0])
       : [
-          ['PF', Math.round(monthly * 0.06)],
-          ['ESI/Health Insurance', 150],
-          ['Professional Tax', 200],
-          ['Loan Recovery', 0],
-          ['EPF', Math.round(monthly * 0.06)],
-        ];
+        ['PF', Math.round(monthly * 0.06)],
+        ['ESI/Health Insurance', 150],
+        ['Professional Tax', 200],
+        ['Loan Recovery', 0],
+        ['EPF', Math.round(monthly * 0.06)],
+      ];
     const totalEarnings = ePairs.reduce((s, [, v]) => s + v, 0);
     const totalDeductions = dPairs.reduce((s, [, v]) => s + v, 0);
     const netSalary = totalEarnings - totalDeductions;
@@ -359,7 +359,7 @@ const CandidateDetailsPage = () => {
       'Non-compete: You agree not to compete with the company during employment and for one year following termination.',
       'Do not accept any present, commission, or gratification from clients or vendors.',
     ];
-    const termsBlock = `<ol style="margin:8px 0 0 18px;">${termsList.map(t=>`<li style='margin-bottom:6px; line-height:1.5;'>${t}</li>`).join('')}</ol>`;
+    const termsBlock = `<ol style="margin:8px 0 0 18px;">${termsList.map(t => `<li style='margin-bottom:6px; line-height:1.5;'>${t}</li>`).join('')}</ol>`;
 
     // Salary matrix for 4-column layout templates
     const maxRows = Math.max(ePairs.length, dPairs.length);
@@ -367,7 +367,7 @@ const CandidateDetailsPage = () => {
     for (let i = 0; i < maxRows; i++) {
       const e = ePairs[i] || ['', 0];
       const d = dPairs[i] || ['', 0];
-      rows.push(`<tr><td>${e[0]}</td><td>₹${(e[1]||0).toLocaleString('en-IN')}</td><td>${d[0]}</td><td>₹${(d[1]||0).toLocaleString('en-IN')}</td></tr>`);
+      rows.push(`<tr><td>${e[0]}</td><td>₹${(e[1] || 0).toLocaleString('en-IN')}</td><td>${d[0]}</td><td>₹${(d[1] || 0).toLocaleString('en-IN')}</td></tr>`);
     }
     rows.push(`<tr><td><strong>Total Earnings</strong></td><td><strong>₹${totalEarnings.toLocaleString('en-IN')}</strong></td><td><strong>Total Deductions</strong></td><td><strong>₹${totalDeductions.toLocaleString('en-IN')}</strong></td></tr>`);
     const salaryMatrix = rows.join('');
@@ -534,19 +534,19 @@ const CandidateDetailsPage = () => {
         candidateId: candidateId,
         assessmentSessionId: assessmentSessionId
       });
-      
+
       const response = await axiosInstance.get(`/api/candidates/${candidateId}/details`, {
         params: { assessmentSessionId }
       });
-      
+
       console.log('API Response:', response.data);
-      
+
       setCandidateData(response.data.candidate);
       setAssessmentData(response.data.assessment);
-      
+
       // Check for existing document collection
       checkDocumentCollectionStatus();
-      
+
       // Check for existing interview status
       checkInterviewStatus();
     } catch (error) {
@@ -562,7 +562,7 @@ const CandidateDetailsPage = () => {
 
   // 🔥 ENHANCED: Create controlled toast for status changes
   const statusChangeToast = useEffectToast.createControlled('CandidateDetailsPage', 'statusChange');
-  
+
   // 🔥 FIX: Add specific useEffect to monitor documentCollectionStatus changes with deduplication
   useEffect(() => {
     if (documentCollectionStatus) {
@@ -572,10 +572,10 @@ const CandidateDetailsPage = () => {
         shouldEnableButton: documentCollectionStatus === 'verified',
         documentCollectionId
       });
-      
+
       // Force component re-render by updating lastRefresh
       setLastRefresh(Date.now());
-      
+
       // Show status change notification with deduplication
       if (documentCollectionStatus === 'verified' && documentCollectionId) {
         documentToast.verified(documentCollectionId, displayName);
@@ -586,15 +586,15 @@ const CandidateDetailsPage = () => {
   // Add useEffect to check document collection status periodically and on focus
   useEffect(() => {
     let intervalId;
-    
+
     if (documentCollectionId) {
-      // 🔥 FIX: Check document collection status every 3 seconds (more frequent for real-time updates)
+      // 🔥 FIX: Check document collection status every 30 seconds instead of 3 seconds to reduce server load
       intervalId = setInterval(() => {
         console.log('🔄 Periodic refresh triggered for document collection:', documentCollectionId);
         refreshDocumentCollectionStatus();
-      }, 3000); // Reduced from 10 seconds to 3 seconds for faster updates
+      }, 30000); // Increased from 3 seconds to 30 seconds to reduce server load
     }
-    
+
     // Also refresh when window gains focus
     const handleFocus = () => {
       if (documentCollectionId) {
@@ -602,7 +602,7 @@ const CandidateDetailsPage = () => {
         refreshDocumentCollectionStatus();
       }
     };
-    
+
     // 🔥 FIX: Also refresh when tab becomes visible
     const handleVisibilityChange = () => {
       if (!document.hidden && documentCollectionId) {
@@ -610,11 +610,11 @@ const CandidateDetailsPage = () => {
         setTimeout(() => refreshDocumentCollectionStatus(), 300);
       }
     };
-    
+
     // Listen for document verification events from other components
     const handleDocumentVerified = (event) => {
       const { documentCollectionId: verifiedId, status, data, timestamp } = event.detail;
-      
+
       console.log('🔔 [EVENT DEBUG] Received document verification event:', {
         verifiedId,
         currentId: documentCollectionId,
@@ -622,19 +622,19 @@ const CandidateDetailsPage = () => {
         timestamp,
         eventData: data
       });
-      
+
       // 🔥 ENHANCED: Update states if this is our document collection using centralized updater
       if (verifiedId === documentCollectionId) {
         console.log('✅ [EVENT DEBUG] Event matches current document collection, updating status');
-        
+
         updateDocumentCollectionState({
           status: status,
           collection: data || documentCollection,
           collectionId: verifiedId
         }, 'verification-event');
-        
+
         console.log('✅ [EVENT DEBUG] States updated from verification event:', status);
-        
+
         // Additional backup refresh after a delay
         setTimeout(() => {
           console.log('🔄 [EVENT DEBUG] Performing delayed backup refresh after event...');
@@ -647,11 +647,11 @@ const CandidateDetailsPage = () => {
         });
       }
     };
-    
+
     window.addEventListener('documentVerified', handleDocumentVerified);
     window.addEventListener('focus', handleFocus);
     window.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     console.log('📡 [EVENT DEBUG] Event listeners attached for document collection:', {
       documentCollectionId,
       listenersAttached: ['documentVerified', 'focus', 'visibilitychange']
@@ -676,13 +676,13 @@ const CandidateDetailsPage = () => {
           currentStatus: documentCollectionStatus,
           timestamp: new Date().toISOString()
         });
-        
+
         // Set loading state
         updateDocumentCollectionState({ isLoading: true }, 'refresh-start');
-        
+
         const response = await axiosInstance.get(`/api/document-collection/${documentCollectionId}`);
         const collectionData = response.data.data;
-        
+
         console.log('📊 [REFRESH DEBUG] API Response received:', {
           id: collectionData._id,
           status: collectionData.status,
@@ -691,7 +691,7 @@ const CandidateDetailsPage = () => {
           verifiedAt: collectionData.verifiedAt,
           verifiedBy: collectionData.verifiedBy
         });
-        
+
         // 🔥 ENHANCED: Use centralized state updater for atomic updates
         updateDocumentCollectionState({
           status: collectionData.status,
@@ -699,31 +699,31 @@ const CandidateDetailsPage = () => {
           collectionId: collectionData._id,
           isLoading: false
         }, 'api-refresh');
-        
+
         console.log('✅ [REFRESH DEBUG] Document collection status updated successfully:', {
           newStatus: collectionData.status,
           timestamp: new Date().toISOString(),
           selectButtonShouldBeEnabled: collectionData.status === 'verified'
         });
-        
+
         // 🔥 FIX: Force candidate data refresh to trigger button re-evaluation
         setCandidateData(prev => ({
           ...prev,
           _documentStatusUpdate: Date.now(), // Force re-evaluation of button state
           _lastDocumentStatus: collectionData.status
         }));
-        
+
         console.log('🔄 [REFRESH DEBUG] All states updated. Component should re-render now.');
-        
+
       } catch (error) {
         console.error('❌ [REFRESH DEBUG] Error refreshing document collection status:', error);
-        
+
         // Update error state
         updateDocumentCollectionState({
           isLoading: false,
           error: error.message
         }, 'api-error');
-        
+
         // Try to refresh from the main list as fallback
         console.log('🔁 [REFRESH DEBUG] Attempting fallback refresh...');
         checkDocumentCollectionStatus();
@@ -740,40 +740,40 @@ const CandidateDetailsPage = () => {
         assessmentSessionId,
         timestamp: new Date().toISOString()
       });
-      
+
       // Try to find existing document collection for this candidate
       const response = await axiosInstance.get('/api/document-collection');
       const collections = response.data.data;
-      
+
       console.log('📋 [CHECK DEBUG] All document collections:', {
         totalCollections: collections.length,
         targetCandidate: candidateId,
         targetAssessment: assessmentSessionId
       });
-      
+
       // Find collection for this candidate and assessment - 🔥 FIX: Handle populated candidateId objects
       const collection = collections.find(col => {
         // Handle both populated objects and direct IDs
         const colCandidateId = col.candidateId?._id || col.candidateId;
         const colAssessmentId = col.assessmentSessionId?._id || col.assessmentSessionId;
-        
+
         const candidateMatch = colCandidateId?.toString() === candidateId?.toString();
         const assessmentMatch = colAssessmentId?.toString() === assessmentSessionId?.toString();
-        
+
         console.log('🔍 [CHECK DEBUG] Collection matching:', {
           collectionId: col._id,
           colCandidateId: colCandidateId?.toString(),
           targetCandidateId: candidateId,
           candidateMatch,
-          colAssessmentId: colAssessmentId?.toString(),  
+          colAssessmentId: colAssessmentId?.toString(),
           targetAssessmentId: assessmentSessionId,
           assessmentMatch,
           overallMatch: candidateMatch && assessmentMatch
         });
-        
+
         return candidateMatch && assessmentMatch;
       });
-      
+
       if (collection) {
         console.log('✅ [CHECK DEBUG] Found document collection:', {
           id: collection._id,
@@ -781,16 +781,16 @@ const CandidateDetailsPage = () => {
           documentsCount: collection.documents?.length || 0,
           candidateName: collection.candidateName
         });
-        
+
         // 🔥 FIX: Use centralized state updater instead of individual setters
         updateDocumentCollectionState({
           status: collection.status,
           collection: collection,
           collectionId: collection._id
         }, 'initial-check');
-        
+
         console.log('✅ [CHECK DEBUG] Document collection state updated successfully');
-        
+
         // Show info message for uploaded but not verified documents with deduplication
         if (collection.status === 'uploaded') {
           documentToast.uploaded(collection._id, collection.candidateName || displayName);
@@ -799,7 +799,7 @@ const CandidateDetailsPage = () => {
         }
       } else {
         console.log('⚠️ [CHECK DEBUG] No document collection found for this candidate');
-        
+
         // Reset to unknown state
         updateDocumentCollectionState({
           status: 'unknown',
@@ -809,7 +809,7 @@ const CandidateDetailsPage = () => {
       }
     } catch (error) {
       console.error('❌ [CHECK DEBUG] Error checking document collection status:', error);
-      
+
       // Set error state
       updateDocumentCollectionState({
         status: 'unknown',
@@ -828,9 +828,9 @@ const CandidateDetailsPage = () => {
 
     const eventTitle = `Interview - ${jobTitle}`;
     const eventDescription = `Interview with ${candidateName} for ${jobTitle} position`;
-    
+
     let calendarUrl = '';
-    
+
     switch (platform) {
       case 'google-meet':
         calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(eventTitle)}&details=${encodeURIComponent(eventDescription)}&add=${encodeURIComponent(candidateEmail)}&add=${encodeURIComponent(hrEmail)}`;
@@ -853,9 +853,9 @@ const CandidateDetailsPage = () => {
         candidateName,
         jobTitle
       });
-      
+
       await ensureInterviewForSession();
-      
+
       // 🔥 FIX: Update interview status to 'scheduled' in backend
       try {
         await axiosInstance.put('/api/interviews/update-status', {
@@ -864,28 +864,28 @@ const CandidateDetailsPage = () => {
           status: 'scheduled',
           platform: platform === 'google-meet' ? 'Google Calendar' : platform === 'microsoft-teams' ? 'Microsoft Teams' : 'Zoom'
         });
-        
+
         console.log('✅ Interview status updated to scheduled in backend');
       } catch (statusError) {
         console.error('❌ Failed to update interview status in backend:', statusError);
         // Continue with local state update as fallback
       }
-      
+
       // Update local state
       setInterviewStatus('scheduled');
-      
+
       console.log('✅ Interview status updated to scheduled locally');
     } catch (e) {
       console.error('❌ Error ensuring interview for session:', e);
       // Continue to open calendar anyway
     }
-    
+
     setShowSchedulingDropdown(false);
-    
+
     // Open external calendar platform
     window.open(calendarUrl, '_blank', 'noopener,noreferrer');
-    
-    debouncedToast.success(`📅 Opening ${platform === 'google-meet' ? 'Google Calendar' : platform === 'microsoft-teams' ? 'Microsoft Teams' : 'Zoom'} for scheduling. Status marked as Scheduled.`, 
+
+    debouncedToast.success(`📅 Opening ${platform === 'google-meet' ? 'Google Calendar' : platform === 'microsoft-teams' ? 'Microsoft Teams' : 'Zoom'} for scheduling. Status marked as Scheduled.`,
       `schedule-${platform}`);
   };
 
@@ -896,29 +896,29 @@ const CandidateDetailsPage = () => {
         assessmentSessionId,
         currentStatus: interviewStatus
       });
-      
+
       await ensureInterviewForSession();
       setInterviewStatus('completed');
-      
-      debouncedToast.success('✅ Interview marked as completed. Please add feedback.', 
+
+      debouncedToast.success('✅ Interview marked as completed. Please add feedback.',
         'interview-completed', {
-          position: "top-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
-      
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+
       // Automatically open feedback modal after marking complete
       setTimeout(() => {
         setShowFeedbackModal(true);
       }, 1500);
-      
+
     } catch (error) {
       console.error('Error marking interview as completed:', error);
       debouncedToast.error('❌ Failed to mark interview as completed. Please try again.', 'interview-complete-error');
-      
+
       // Provide more specific error feedback
       if (error.response?.status === 404) {
         debouncedToast.error('⚠️ Interview session not found. Please ensure the interview was properly scheduled.', 'interview-not-found');
@@ -935,13 +935,13 @@ const CandidateDetailsPage = () => {
         assessmentSessionId,
         ...interviewFeedback
       });
-      
+
       debouncedToast.success('Interview feedback submitted successfully!', 'feedback-submit');
       setShowFeedbackModal(false);
-      
+
       // Enable decision making after feedback is submitted
       setInterviewFeedback(prev => ({ ...prev, feedbackSubmitted: true }));
-      
+
     } catch (error) {
       console.error('Error submitting feedback:', error);
       debouncedToast.error('Failed to submit feedback', 'feedback-error');
@@ -950,7 +950,7 @@ const CandidateDetailsPage = () => {
 
   const handleSelectCandidate = async (offerPayload) => {
     console.log('[Submit] Select Candidate', { candidateId, assessmentSessionId, offerPayload });
-    
+
     // Check if feedback is required and not submitted
     if (interviewStatus === 'completed' && !interviewFeedback.feedbackSubmitted) {
       debouncedToast.warning('Please submit interview feedback before making a decision.', 'feedback-required');
@@ -971,7 +971,7 @@ const CandidateDetailsPage = () => {
       debouncedToast.error('Please fill Position, Salary, and Start Date before sending the offer.', 'offer-fields-required');
       return;
     }
-    
+
     if (!offerPayload.offerContent || offerPayload.offerContent.trim().length < 30) {
       debouncedToast.error('Offer content is empty. Please review and update the letter.', 'offer-content-empty');
       return;
@@ -988,12 +988,12 @@ const CandidateDetailsPage = () => {
         documentCollectionId
       });
       console.log('[API] /api/candidates/select response', response?.data);
-      
+
       debouncedToast.success('Professional offer letter sent to candidate with PDF attachment!', 'offer-sent');
       debouncedToast.success('HR copy sent successfully!', 'hr-copy-sent');
       setShowOfferModal(false);
       navigate('/dashboard/candidates');
-      
+
     } catch (error) {
       console.error('Error selecting candidate:', error);
       debouncedToast.error('Failed to send offer letter', 'offer-send-error');
@@ -1004,18 +1004,18 @@ const CandidateDetailsPage = () => {
 
   const handleRejectCandidate = async () => {
     console.log('[Submit] Reject Candidate', { candidateId, assessmentSessionId, rejectionData });
-    
+
     // Validate rejection data
     if (!rejectionData.reason) {
       toast.error('Please select a reason for rejection.');
       return;
     }
-    
+
     if (rejectionData.reason === 'custom' && !rejectionData.customReason.trim()) {
       toast.error('Please provide a custom reason for rejection.');
       return;
     }
-    
+
     // Check if feedback is required and not submitted
     if (interviewStatus === 'completed' && !interviewFeedback.feedbackSubmitted) {
       toast.warning('Please submit interview feedback before making a decision.');
@@ -1032,12 +1032,12 @@ const CandidateDetailsPage = () => {
         interviewFeedback: interviewFeedback.feedbackSubmitted ? interviewFeedback : null
       });
       console.log('[API] /api/candidates/reject response', response?.data);
-      
+
       debouncedToast.success('Candidate rejected successfully!', 'candidate-rejected');
       debouncedToast.success(`Professional rejection email sent to ${candidateData.email}`, 'rejection-email-sent');
       setShowRejectModal(false);
       navigate('/dashboard/candidates');
-      
+
     } catch (error) {
       console.error('Error rejecting candidate:', error);
       debouncedToast.error('Failed to reject candidate', 'reject-candidate-error');
@@ -1050,17 +1050,17 @@ const CandidateDetailsPage = () => {
     try {
       // Use view=true parameter for inline viewing with signed URLs
       const response = await axiosInstance.get(`/api/document-collection/${documentCollectionId}/documents/${documentIndex}?view=true`);
-      
+
       if (response.data.success && response.data.url) {
         console.log('Opening document for viewing:', {
           url: response.data.url,
           filename: response.data.filename,
           mode: response.data.mode
         });
-        
+
         // Open in new tab for inline viewing
         window.open(response.data.url, '_blank');
-        
+
         // Show success notification
         debouncedToast.success(`📄 Opening ${response.data.filename} for viewing`, 'doc-view-success');
       } else {
@@ -1074,14 +1074,14 @@ const CandidateDetailsPage = () => {
 
   const downloadDocument = async (type, documentId, filename) => {
     try {
-      const endpoint = type === 'resume' 
-        ? `/api/resumes/${documentId}` 
+      const endpoint = type === 'resume'
+        ? `/api/resumes/${documentId}`
         : `/api/job-descriptions/${documentId}`;
-      
+
       const response = await axiosInstance.get(endpoint, {
         params: { download: true }
       });
-      
+
       if (response.data.url) {
         const link = document.createElement('a');
         link.href = response.data.url;
@@ -1111,33 +1111,33 @@ const CandidateDetailsPage = () => {
           documentCollectionId,
           timestamp: new Date().toISOString()
         });
-        
+
         const response = await axiosInstance.get(`/api/document-collection/${documentCollectionId}`);
         const collectionData = response.data.data;
-        
+
         console.log('📊 [UPLOAD COMPLETE DEBUG] Updated collection data:', {
           id: collectionData._id,
           status: collectionData.status,
           documentsCount: collectionData.documents?.length || 0
         });
-        
+
         // 🔥 FIX: Use centralized state updater instead of individual setters
         updateDocumentCollectionState({
           status: collectionData.status,
           collection: collectionData,
           collectionId: documentCollectionId
         }, 'upload-complete');
-        
+
         toast.success('✅ Documents uploaded successfully! You can now verify them.');
-        
+
         console.log('✅ [UPLOAD COMPLETE DEBUG] Document states updated after upload:', {
           newStatus: collectionData.status,
           documentsCount: collectionData.documents?.length || 0
         });
-        
+
       } catch (error) {
         console.error('❌ [UPLOAD COMPLETE DEBUG] Error fetching updated document collection:', error);
-        
+
         // Set error state
         updateDocumentCollectionState({
           error: error.message
@@ -1151,51 +1151,51 @@ const CandidateDetailsPage = () => {
       toast.error('No document collection found');
       return;
     }
-    
+
     try {
       console.log('🔍 [VERIFY DEBUG] Starting document verification from CandidateDetailsPage:', {
         documentCollectionId,
         currentStatus: documentCollectionStatus,
         timestamp: new Date().toISOString()
       });
-      
+
       const response = await axiosInstance.put(`/api/document-collection/${documentCollectionId}/verify`, {
         verifiedBy: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user'))._id : null,
         verificationNotes: 'Documents verified successfully'
       });
-      
+
       console.log('✅ [VERIFY DEBUG] Document verification API response:', {
         success: response.data.success,
         status: response.data.data?.status,
         message: response.data.message
       });
-      
+
       // 🔥 FIX: Use centralized state updater instead of individual setters
       const verifiedData = response.data.data;
-      
+
       updateDocumentCollectionState({
         status: 'verified',
         collection: verifiedData
       }, 'direct-verification');
-      
+
       console.log('✅ [VERIFY DEBUG] Document states updated after verification');
-      
+
       // Force component refresh
       setLastRefresh(Date.now());
-      
+
       // Show success message
       toast.success('✅ Documents verified successfully! Select Candidate button is now enabled.');
-      
+
       // Force a delayed refresh to ensure consistency
       setTimeout(() => {
         console.log('🔄 [VERIFY DEBUG] Performing delayed refresh after verification...');
         refreshDocumentCollectionStatus();
       }, 1000);
-      
+
     } catch (error) {
       console.error('❌ [VERIFY DEBUG] Error verifying documents:', error);
       toast.error('❌ Failed to verify documents');
-      
+
       // Set error state
       updateDocumentCollectionState({
         error: error.message
@@ -1208,28 +1208,28 @@ const CandidateDetailsPage = () => {
       debouncedToast.error('No document collection found', 'reject-docs-no-collection');
       return;
     }
-    
+
     if (!rejectionReason.trim()) {
       debouncedToast.error('Please provide a rejection reason', 'reject-docs-no-reason');
       return;
     }
-    
+
     try {
       const response = await axiosInstance.put(`/api/document-collection/${documentCollectionId}/reject`, {
         rejectedBy: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user'))._id : null,
         rejectionReason: rejectionReason
       });
-      
+
       setDocumentCollection(response.data.data); // Update with full data
       setDocumentCollectionStatus('rejected');
       setRejectionReason('');
       setShowRejectDocumentsModal(false);
-      
+
       // Use deduplicated toast
       documentToast.rejected(documentCollectionId, rejectionReason);
-      
-      // Refresh the document collection status
-      setTimeout(refreshDocumentCollectionStatus, 1000);
+
+      // Refresh the document collection status - reduced frequency
+      setTimeout(refreshDocumentCollectionStatus, 5000);
     } catch (error) {
       console.error('Error rejecting documents:', error);
       debouncedToast.error('Failed to reject documents', `reject-docs-error-${documentCollectionId}`);
@@ -1264,7 +1264,7 @@ const CandidateDetailsPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4">
-      <motion.div 
+      <motion.div
         className="max-w-7xl mx-auto"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1293,48 +1293,48 @@ const CandidateDetailsPage = () => {
               {/* Interview Scheduling */}
               {interviewStatus === 'not-scheduled' && (
                 <div className="relative">
-              <Button
+                  <Button
                     onClick={() => setShowSchedulingDropdown(!showSchedulingDropdown)}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <FontAwesomeIcon icon={faCalendarAlt} className="mr-2" />
-                Schedule Interview
-                    <FontAwesomeIcon 
-                      icon={showSchedulingDropdown ? faChevronUp : faChevronDown} 
-                      className="ml-2" 
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <FontAwesomeIcon icon={faCalendarAlt} className="mr-2" />
+                    Schedule Interview
+                    <FontAwesomeIcon
+                      icon={showSchedulingDropdown ? faChevronUp : faChevronDown}
+                      className="ml-2"
                     />
                   </Button>
-                  
-{showSchedulingDropdown && (
-  <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-    <div className="p-2">
-      <button
-        onClick={() => handleExternalScheduling('google-meet')}
-        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded flex items-center"
-      >
-        <FontAwesomeIcon icon={faGoogleBrand} className="mr-2 text-blue-500" />
-        Google Calendar
-        <FontAwesomeIcon icon={faExternalLinkAlt} className="ml-auto text-xs" />
-      </button>
-      <button
-        onClick={() => handleExternalScheduling('microsoft-teams')}
-        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded flex items-center"
-      >
-        <FontAwesomeIcon icon={faMicrosoftBrand} className="mr-2 text-blue-600" />
-        Microsoft Teams
-        <FontAwesomeIcon icon={faExternalLinkAlt} className="ml-auto text-xs" />
-      </button>
-      <button
-        onClick={() => handleExternalScheduling('zoom')}
-        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded flex items-center"
-      >
-        <FontAwesomeIcon icon={faVideo} className="mr-2 text-blue-700" /> {/* Replaced faZoom with faVideo */}
-        Zoom
-        <FontAwesomeIcon icon={faExternalLinkAlt} className="ml-auto text-xs" />
-      </button>
-    </div>
-  </div>
-)}                </div>
+
+                  {showSchedulingDropdown && (
+                    <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                      <div className="p-2">
+                        <button
+                          onClick={() => handleExternalScheduling('google-meet')}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded flex items-center"
+                        >
+                          <FontAwesomeIcon icon={faGoogleBrand} className="mr-2 text-blue-500" />
+                          Google Calendar
+                          <FontAwesomeIcon icon={faExternalLinkAlt} className="ml-auto text-xs" />
+                        </button>
+                        <button
+                          onClick={() => handleExternalScheduling('microsoft-teams')}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded flex items-center"
+                        >
+                          <FontAwesomeIcon icon={faMicrosoftBrand} className="mr-2 text-blue-600" />
+                          Microsoft Teams
+                          <FontAwesomeIcon icon={faExternalLinkAlt} className="ml-auto text-xs" />
+                        </button>
+                        <button
+                          onClick={() => handleExternalScheduling('zoom')}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded flex items-center"
+                        >
+                          <FontAwesomeIcon icon={faVideo} className="mr-2 text-blue-700" /> {/* Replaced faZoom with faVideo */}
+                          Zoom
+                          <FontAwesomeIcon icon={faExternalLinkAlt} className="ml-auto text-xs" />
+                        </button>
+                      </div>
+                    </div>
+                  )}                </div>
               )}
 
               {/* Interview Completed Button */}
@@ -1351,12 +1351,12 @@ const CandidateDetailsPage = () => {
               {/* Interview Feedback Button */}
               {interviewStatus === 'completed' && !interviewFeedback.feedbackSubmitted && (
                 <Button
-                  onClick={async () => { try { await ensureInterviewForSession(); setShowFeedbackModal(true); } catch(e){} }}
+                  onClick={async () => { try { await ensureInterviewForSession(); setShowFeedbackModal(true); } catch (e) { } }}
                   className="bg-purple-600 hover:bg-purple-700 text-white"
                 >
                   <FontAwesomeIcon icon={faComments} className="mr-2" />
                   Add Interview Feedback
-              </Button>
+                </Button>
               )}
 
               {/* Decision Buttons - Enhanced with optimized button component */}
@@ -1373,7 +1373,7 @@ const CandidateDetailsPage = () => {
                     <div>State Update: <span className="font-mono bg-orange-100 px-1 rounded">{documentCollectionState.lastUpdate ? new Date(documentCollectionState.lastUpdate).toLocaleTimeString() : 'none'}</span></div>
                   </div>
                   <div className="mt-2 flex gap-2">
-                    <button 
+                    <button
                       onClick={() => {
                         console.log('🔄 [MANUAL REFRESH] Forcing document status refresh from diagnostic panel');
                         refreshDocumentCollectionStatus();
@@ -1382,7 +1382,7 @@ const CandidateDetailsPage = () => {
                     >
                       🔄 Force Refresh
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         console.log('📊 [STATE DEBUG] Current component state:', {
                           documentCollectionState,
@@ -1398,8 +1398,8 @@ const CandidateDetailsPage = () => {
                     </button>
                   </div>
                 </div>
-                
-                <OptimizedSelectCandidateButton 
+
+                <OptimizedSelectCandidateButton
                   documentCollectionStatus={documentCollectionStatus}
                   documentCollectionId={documentCollectionId}
                   documentCollection={documentCollection}
@@ -1407,7 +1407,7 @@ const CandidateDetailsPage = () => {
                   onSelectCandidate={() => setShowOfferModal(true)}
                   onRefreshDocuments={refreshDocumentCollectionStatus}
                 />
-                
+
                 <Button
                   onClick={async () => {
                     try {
@@ -1433,7 +1433,7 @@ const CandidateDetailsPage = () => {
                   <FontAwesomeIcon icon={faEnvelopeOpen} className="mr-2" />
                   Send Interview Invitation
                 </Button>
-                
+
                 <Button
                   onClick={() => {
                     console.log('[UI] Open Reject Modal');
@@ -1460,28 +1460,27 @@ const CandidateDetailsPage = () => {
               <Button
                 onClick={() => {
                   setShowDocumentCollectionModal(true);
-                  // Refresh status when modal is opened
-                  setTimeout(refreshDocumentCollectionStatus, 1000);
+                  // Refresh status when modal is opened - reduced frequency
+                  setTimeout(refreshDocumentCollectionStatus, 5000);
                 }}
-                className={`${
-                  documentCollectionId 
-                    ? (documentCollectionStatus === 'verified' 
-                        ? 'bg-green-600 hover:bg-green-700' 
-                        : 'bg-indigo-600 hover:bg-indigo-700'
-                      )
+                className={`${documentCollectionId
+                    ? (documentCollectionStatus === 'verified'
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                    )
                     : 'bg-indigo-600 hover:bg-indigo-700'
-                } text-white`}
+                  } text-white`}
               >
                 <FontAwesomeIcon icon={faFileUpload} className="mr-2" />
                 {documentCollectionId
-                  ? (documentCollectionStatus === 'verified' 
-                      ? 'Documents Verified ✓' 
-                      : documentCollectionStatus === 'uploaded'
-                        ? 'Documents Uploaded - Pending Verification'
-                        : documentCollectionStatus === 'rejected'
-                          ? 'Documents Rejected - Request Again'
-                          : 'Documents Requested'
-                    )
+                  ? (documentCollectionStatus === 'verified'
+                    ? 'Documents Verified ✓'
+                    : documentCollectionStatus === 'uploaded'
+                      ? 'Documents Uploaded - Pending Verification'
+                      : documentCollectionStatus === 'rejected'
+                        ? 'Documents Rejected - Request Again'
+                        : 'Documents Requested'
+                  )
                   : 'Request Documents'
                 }
               </Button>
@@ -1497,7 +1496,7 @@ const CandidateDetailsPage = () => {
                     <FontAwesomeIcon icon={faSync} className="mr-2" />
                     Refresh Document Status
                   </Button>
-                  
+
                   {/* Debug button - remove in production */}
                   <Button
                     onClick={() => {
@@ -1516,7 +1515,7 @@ const CandidateDetailsPage = () => {
                   >
                     Debug Status
                   </Button>
-                  
+
                   {/* Force verification test button */}
                   {documentCollectionId && documentCollectionStatus === 'uploaded' && (
                     <Button
@@ -1594,7 +1593,7 @@ const CandidateDetailsPage = () => {
                   )}
                 </div>
               )}
-              
+
               {/* Show message when no documents are requested yet */}
               {!documentCollectionId && (
                 <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
@@ -1619,11 +1618,10 @@ const CandidateDetailsPage = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                    activeTab === tab.id
+                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === tab.id
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   <FontAwesomeIcon icon={tab.icon} />
                   {tab.label}
@@ -1739,7 +1737,7 @@ const CandidateDetailsPage = () => {
                     Manage Documents
                   </Button>
                 </div>
-                
+
                 {documentCollectionId ? (
                   <div className="bg-white rounded-lg shadow p-6">
                     <div className="flex items-center justify-between mb-4">
@@ -1794,7 +1792,7 @@ const CandidateDetailsPage = () => {
                         )}
                       </div>
                     </div>
-                    
+
                     {documentCollection?.documents?.length > 0 && (
                       <div className="mt-6">
                         <h5 className="text-md font-medium text-gray-900 mb-4">Uploaded Documents</h5>
@@ -1826,7 +1824,7 @@ const CandidateDetailsPage = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     <div className="mt-6 flex gap-3">
                       <Button
                         onClick={refreshDocumentCollectionStatus}
@@ -1930,11 +1928,10 @@ const CandidateDetailsPage = () => {
               </Button>
               <Button
                 onClick={handleRejectCandidate}
-                className={`bg-red-600 hover:bg-red-700 text-white ${
-                  !rejectionData.reason || (rejectionData.reason === 'custom' && !rejectionData.customReason.trim()) || isSubmittingReject
-                    ? 'opacity-70 cursor-not-allowed' 
+                className={`bg-red-600 hover:bg-red-700 text-white ${!rejectionData.reason || (rejectionData.reason === 'custom' && !rejectionData.customReason.trim()) || isSubmittingReject
+                    ? 'opacity-70 cursor-not-allowed'
                     : ''
-                }`}
+                  }`}
                 disabled={!rejectionData.reason || (rejectionData.reason === 'custom' && !rejectionData.customReason.trim()) || isSubmittingReject}
               >
                 <FontAwesomeIcon icon={faUserTimes} className="mr-2" />
@@ -1958,11 +1955,10 @@ const CandidateDetailsPage = () => {
                   <button
                     key={rating}
                     onClick={() => setInterviewFeedback({ ...interviewFeedback, rating })}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      interviewFeedback.rating >= rating
+                    className={`w-10 h-10 rounded-full flex items-center justify-center ${interviewFeedback.rating >= rating
                         ? 'bg-yellow-400 text-white'
                         : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                    }`}
+                      }`}
                   >
                     <FontAwesomeIcon icon={faStar} />
                   </button>
@@ -2061,13 +2057,13 @@ const CandidateDetailsPage = () => {
         {/* Reject Documents Modal */}
         <AnimatePresence>
           {showRejectDocumentsModal && (
-            <motion.div 
+            <motion.div
               className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <motion.div 
+              <motion.div
                 className="bg-white rounded-2xl w-full max-w-md shadow-2xl"
                 initial={{ y: 50, opacity: 0, scale: 0.95 }}
                 animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -2096,7 +2092,7 @@ const CandidateDetailsPage = () => {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="p-6 space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2110,7 +2106,7 @@ const CandidateDetailsPage = () => {
                       placeholder="Please provide a reason for rejecting these documents..."
                     />
                   </div>
-                  
+
                   <div className="flex gap-3 pt-4">
                     <Button
                       variant="outline"
@@ -2156,7 +2152,7 @@ const OptimizedSelectCandidateButton = React.memo(({
     isEnabled: documentCollectionStatus === 'verified',
     timestamp: new Date().toISOString()
   });
-  
+
   const handleClick = useCallback(async () => {
     // 🔥 DEBUG: Comprehensive button state logging
     const currentState = {
@@ -2167,20 +2163,20 @@ const OptimizedSelectCandidateButton = React.memo(({
       lastRefresh: new Date(lastRefresh).toISOString(),
       timestamp: new Date().toISOString()
     };
-    
+
     console.log('🎯 [BUTTON CLICK DEBUG] Select Candidate Button State:', currentState);
-    
+
     if (documentCollectionStatus !== 'verified') {
       console.log('❌ [BUTTON CLICK DEBUG] Documents not verified. Current status:', documentCollectionStatus);
       console.log('🔄 [BUTTON CLICK DEBUG] Forcing document status refresh...');
-      
+
       try {
         await onRefreshDocuments();
         console.log('✅ [BUTTON CLICK DEBUG] Refresh completed. Checking status again...');
-        
+
         // Use a promise to wait for state update
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
+
         // Re-check status after refresh
         if (documentCollectionStatus === 'verified') {
           console.log('✅ [BUTTON CLICK DEBUG] Status verified after refresh. Opening modal...');
@@ -2195,24 +2191,23 @@ const OptimizedSelectCandidateButton = React.memo(({
       }
       return;
     }
-    
+
     console.log('✅ [BUTTON CLICK DEBUG] Documents verified. Opening offer modal...');
     onSelectCandidate();
   }, [documentCollectionStatus, documentCollectionId, documentCollection, lastRefresh, onSelectCandidate, onRefreshDocuments]);
-  
+
   const isEnabled = documentCollectionStatus === 'verified';
-  const buttonText = isEnabled 
-    ? 'Select Candidate' 
+  const buttonText = isEnabled
+    ? 'Select Candidate'
     : `Documents Required (${documentCollectionStatus || 'none'})`;
-  
+
   return (
     <Button
       onClick={handleClick}
-      className={`bg-green-600 hover:bg-green-700 text-white transition-all duration-200 ${
-        !isEnabled 
-          ? 'opacity-50 cursor-not-allowed' 
+      className={`bg-green-600 hover:bg-green-700 text-white transition-all duration-200 ${!isEnabled
+          ? 'opacity-50 cursor-not-allowed'
           : 'opacity-100'
-      }`}
+        }`}
       disabled={!isEnabled}
     >
       <FontAwesomeIcon icon={faHandshake} className="mr-2" />

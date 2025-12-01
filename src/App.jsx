@@ -30,6 +30,17 @@ import DocumentUploadPage from './components/CandidatePortal/DocumentUploadPage'
 import './App.css';
 import './styles.css';
 
+// Import new pages
+import ServicesPage from './pages/ServicesPage';
+import ServiceDetailPage from './pages/ServiceDetailPage';
+import FeaturesPage from './pages/FeaturesPage';
+import HowItWorksPage from './pages/HowItWorksPage';
+import PricingPage from './pages/PricingPage';
+import BlogPage from './pages/BlogPage';
+import AboutPage from './pages/AboutPage';
+import ContactPage from './pages/ContactPage';
+import CareersPage from './pages/CareersPage';
+
 function App() {
   // Initialize accessibility features
   useEffect(() => {
@@ -59,22 +70,7 @@ function App() {
   }, []);
 
   return (
-    <ErrorBoundary 
-      title="Application Error"
-      description="The SkillMatrix application encountered an unexpected error. Please try refreshing the page."
-      onError={(error, errorInfo) => {
-        // Log to error tracking service
-        console.error('Application Error:', error, errorInfo);
-        
-        // Report to analytics if available
-        if (window.gtag) {
-          window.gtag('event', 'exception', {
-            description: error.toString(),
-            fatal: false,
-          });
-        }
-      }}
-    >
+    <ErrorBoundary>
       <FeedbackProvider>
         {/* Skip Navigation Link */}
         <a 
@@ -86,12 +82,7 @@ function App() {
         </a>
         
         <Router>
-          <ToastContainer 
-            position="top-center" 
-            role="alert"
-            aria-live="assertive"
-            aria-atomic="true"
-          />
+          <ToastContainer />
           <Routes>
             {/* Landing Routes (with Navbar + Footer) */}
             <Route
@@ -104,6 +95,107 @@ function App() {
                 </LandingLayout>
               }
             />
+            
+            {/* NEW: Marketing Pages */}
+            <Route
+              path="/features"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="Features">
+                    <FeaturesPage />
+                  </main>
+                </LandingLayout>
+              }
+            />
+            
+            <Route
+              path="/how-it-works"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="How It Works">
+                    <HowItWorksPage />
+                  </main>
+                </LandingLayout>
+              }
+            />
+            
+            <Route
+              path="/services"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="Services">
+                    <ServicesPage />
+                  </main>
+                </LandingLayout>
+              }
+            />
+            
+            <Route
+              path="/services/:serviceId"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="Service Details">
+                    <ServiceDetailPage />
+                  </main>
+                </LandingLayout>
+              }
+            />
+            
+            <Route
+              path="/pricing"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="Pricing">
+                    <PricingPage />
+                  </main>
+                </LandingLayout>
+              }
+            />
+            
+            <Route
+              path="/blog"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="Blog">
+                    <BlogPage />
+                  </main>
+                </LandingLayout>
+              }
+            />
+            
+            <Route
+              path="/about"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="About">
+                    <AboutPage />
+                  </main>
+                </LandingLayout>
+              }
+            />
+            
+            <Route
+              path="/contact"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="Contact">
+                    <ContactPage />
+                  </main>
+                </LandingLayout>
+              }
+            />
+            
+            <Route
+              path="/careers"
+              element={
+                <LandingLayout>
+                  <main id="main-content" role="main" aria-label="Careers">
+                    <CareersPage />
+                  </main>
+                </LandingLayout>
+              }
+            />
+            
             <Route
               path="/login"
               element={

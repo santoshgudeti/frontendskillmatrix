@@ -3087,6 +3087,21 @@ function CandidateTable() {
               transition={{ duration: 0.3, delay: 0.1 }}
             >
               <div className="flex flex-col gap-3 max-w-4xl mx-auto">
+                {/* Analysis Summary Card - Moved to TOP and fixed data access */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+                  <div className="bg-gradient-to-r from-gray-600 to-gray-800 px-3 py-2">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <FontAwesomeIcon icon={faClipboardList} />
+                      Analysis Summary
+                    </h3>
+                  </div>
+                  <div className="p-3">
+                    <p className="text-xs text-gray-700">
+                      {analysis["Analysis Summary"] || result.matchingResult?.[0]?.Analysis?.["Analysis Summary"] || result.matchingResult?.[0]?.["Analysis Summary"] || "No analysis summary available"}
+                    </p>
+                  </div>
+                </div>
+                
                 {/* Contact Information Card */}
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
                   <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-3 py-2">
@@ -3491,21 +3506,6 @@ function CandidateTable() {
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-                
-                {/* Analysis Summary Card */}
-                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
-                  <div className="bg-gradient-to-r from-gray-600 to-gray-800 px-3 py-2">
-                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                      <FontAwesomeIcon icon={faClipboardList} />
-                      Analysis Summary
-                    </h3>
-                  </div>
-                  <div className="p-3">
-                    <p className="text-xs text-gray-700">
-                      {analysis["Analysis Summary"] || "No analysis summary available"}
-                    </p>
                   </div>
                 </div>
               </div>
