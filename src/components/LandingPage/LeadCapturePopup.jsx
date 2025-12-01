@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiUser, FiMail, FiPhone, FiBriefcase, FiSend } from 'react-icons/fi';
 import { Button } from '../ui/Button';
-import axios from 'axios';
+import { axiosInstance } from '../../axiosUtils';
 
 const LeadCapturePopup = ({ currentPage }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -36,8 +36,12 @@ const LeadCapturePopup = ({ currentPage }) => {
 
     if (!hasShownPopup) {
       // Show popup after 10 seconds
-      const timer = setTimeout(() => {
-        setIsOpen(true);
+      const timer = setTimeout(async () => {
+        // Check backend health before showing popup
+        const isBackendHealthy = await checkBackendHealth();
+        if (isBackendHealthy) {
+          setIsOpen(true);
+        }
       }, 6000); // 10 seconds
 
       return () => clearTimeout(timer);
@@ -78,6 +82,17 @@ const LeadCapturePopup = ({ currentPage }) => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Check if backend is reachable
+  const checkBackendHealth = async () => {
+    try {
+      await axiosInstance.get('/health');
+      return true;
+    } catch (error) {
+      console.error('Backend health check failed:', error);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -85,10 +100,17 @@ const LeadCapturePopup = ({ currentPage }) => {
       return;
     }
 
+    // Check if backend is reachable before submitting
+    const isBackendHealthy = await checkBackendHealth();
+    if (!isBackendHealthy) {
+      alert('Unable to connect to the server. Please check your internet connection and try again.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const response = await axios.post('/api/save-lead', formData);
+      const response = await axiosInstance.post('/api/save-lead', formData);
       
       if (response.status === 200) {
         // Success - close popup and mark as shown
@@ -107,7 +129,18 @@ const LeadCapturePopup = ({ currentPage }) => {
       }
     } catch (error) {
       console.error('Error submitting lead:', error);
-      alert('Failed to submit. Please try again.');
+      
+      // More detailed error handling
+      if (error.response) {
+        // Server responded with error status
+        alert(`Failed to submit: ${error.response.data.message || 'Server error occurred'}`);
+      } else if (error.request) {
+        // Request was made but no response received
+        alert('Failed to submit: Network error. Please check your connection and try again.');
+      } else {
+        // Something else happened
+        alert('Failed to submit. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
