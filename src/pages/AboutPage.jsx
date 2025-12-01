@@ -226,11 +226,7 @@ const AboutPage = () => {
                   <FiArrowRight className="w-5 h-5" />
                 </Button>
               </Link>
-              <a href="https://cognitbotz.com" target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="xl" className="border-2 border-white text-primary-600 hover:bg-white hover:text-blue-600 font-black hover:scale-105 transition-all duration-300">
-                  Learn More
-                </Button>
-              </a>
+              
             </div>
           </motion.div>
         </div>

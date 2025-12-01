@@ -646,11 +646,7 @@ const serviceDetails = {
                     <FiArrowRight className="w-5 h-5" />
                   </Button>
                 </Link>
-                <a href="https://cognitbotz.com" target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="lg" className="border-2 border-white text-black hover:bg-white hover:text-blue-600 font-semibold">
-                    Schedule Demo
-                  </Button>
-                </a>
+               
               </div>
             </motion.div>
 

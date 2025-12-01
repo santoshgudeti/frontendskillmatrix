@@ -158,12 +158,7 @@ const BlogPage = () => {
             viewport={{ once: true }}
             transition={{ delay: 0.3 }}
           >
-            <a href="https://cognitbotz.com/blog" target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="lg">
-                View All Articles
-                <FiArrowRight className="w-4 h-4" />
-              </Button>
-            </a>
+  
           </motion.div>
         </div>
       </section>

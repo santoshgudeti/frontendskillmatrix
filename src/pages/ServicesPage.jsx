@@ -65,12 +65,7 @@ const ServicesPage = () => {
                   <FiArrowRight className="w-6 h-6" />
                 </Button>
               </Link>
-              <a href="https://cognitbotz.com" target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="xl" className="border-2 border-white text-black hover:bg-white hover:text-blue-600 font-black px-10 py-4 hover:scale-105 transition-all duration-300">
-                  Schedule Demo
-                  <FiPlay className="w-6 h-6" />
-                </Button>
-              </a>
+              
             </div>
           </motion.div>
         </div>
@@ -292,11 +287,6 @@ const ServicesPage = () => {
                   <FiArrowRight className="w-6 h-6" />
                 </Button>
               </Link>
-              <a href="https://cognitbotz.com" target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="xl" className="border-2 border-white text-black hover:bg-white hover:text-blue-600 font-black px-10 py-4 hover:scale-105 transition-all duration-300">
-                  Talk to Sales
-                </Button>
-              </a>
             </div>
           </motion.div>
         </div>
