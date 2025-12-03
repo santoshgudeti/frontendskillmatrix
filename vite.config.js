@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   
   return {
-    base: './', // Use relative paths for all assets
+    base: '/', // Use relative paths for all assets
     plugins: [react()],
     server: {
       host: true, // Allow external connections
