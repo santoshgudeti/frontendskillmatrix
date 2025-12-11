@@ -21,12 +21,38 @@ npm run sitemap
 
 This will update the sitemap with the latest pages and service IDs.
 
-### Regenerating the Sitemap
+## Docker Deployment
 
-To regenerate the sitemap (e.g., when adding new services), run:
+This project includes Docker configuration for both production and development environments, serving the application directly with Node.js without Nginx.
+
+### Production Deployment
+
+To build and run the production version using Docker:
 
 ```bash
-npm run sitemap
+docker-compose up --build
 ```
 
-This will update the sitemap with the latest pages and service IDs.
+This will build the optimized production version and start the frontend service on port 3000, serving the static files directly with Node.js.
+
+### Development with Docker
+
+For development with hot-reloading:
+
+```bash
+docker-compose -f docker-compose.dev.yml up --build
+```
+
+This will start the development server with volume mounting for live code updates.
+
+### Manual Docker Build
+
+To manually build the Docker image:
+
+```bash
+# Production build
+docker build -t skillmatrix-frontend .
+
+# Development build
+docker build -f Dockerfile.dev -t skillmatrix-frontend-dev .
+```

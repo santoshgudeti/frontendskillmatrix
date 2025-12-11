@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_BACKEND_URL=http://localhost:5000
+        - VITE_APP_TITLE=SkillMatrix ATS
+        - VITE_APP_DESCRIPTION=AI-Powered Applicant Tracking System
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    networks:
+      - skillmatrix-network
+
+networks:
+  skillmatrix-network:
+    driver: bridge

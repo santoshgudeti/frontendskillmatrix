@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  frontend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_BACKEND_URL=http://host.docker.internal:5000
+    restart: unless-stopped
+    networks:
+      - skillmatrix-network
+
+networks:
+  skillmatrix-network:
+    driver: bridge

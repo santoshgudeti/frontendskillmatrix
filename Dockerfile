@@ -41,33 +41,33 @@ ENV VITE_APP_DESCRIPTION=${VITE_APP_DESCRIPTION:-"AI-Powered Applicant Tracking 
 # Build the application
 RUN npm run build
 
-# Production stage with Nginx
-FROM nginx:1.25-alpine AS production
+# Production stage - Serve static files with Node.js
+FROM base AS production
+
+# Install serve globally to serve static files
+RUN npm install -g serve
 
 # Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
-
-# Copy custom nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+RUN apk add --no-cache dumb-init curl
 
 # Copy built assets from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /app/dist
 
-# Create nginx user and set permissions
-RUN addgroup -S nginx && adduser -S nginx -G nginx
+# Set working directory to dist folder
+WORKDIR /app/dist
 
-# Create necessary directories
-RUN mkdir -p /var/cache/nginx /var/log/nginx /var/run/nginx
+# Create non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 # Set proper permissions
-RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx /var/run/nginx
+RUN chown -R appuser:appgroup /app/dist
 
 # Switch to non-root user
-USER nginx
+USER appuser
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+# Health check using curl
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/ || exit 1
 
 # Expose port
 EXPOSE 3000
@@ -75,5 +75,5 @@ EXPOSE 3000
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Serve the application
+CMD ["serve", "-s", ".", "-l", "3000"]
