@@ -13,14 +13,14 @@ RUN apk add --no-cache \
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
-# Dependencies stage
+# Dependencies stage - Install both dependencies and devDependencies for building
 FROM base AS dependencies
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --frozen-lockfile && npm cache clean --force
+# Install all dependencies including devDependencies needed for build
+RUN npm ci --include=dev && npm cache clean --force
 
 # Build stage
 FROM dependencies AS builder
