@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Helmet } from 'react-helmet-async';
 import {
   FiFileText, FiSearch, FiTarget, FiCheckCircle, FiVideo, FiShield,
   FiUsers, FiBarChart2, FiZap, FiCpu, FiArrowRight, FiAward
@@ -24,6 +25,11 @@ const FeaturesPage = () => {
   };
 
   return (
+      <>
+      <Helmet>
+       <title>AI Recruitment Features – SkillMatrix AI | Resume Parsing & Matching Tools</title>
+        <meta name="description" content="SkillMatrix AI offers smart resume parsing, JD validation, candidate scoring, and talent analytics. Empower your HR team to hire faster and smarter. View features now." />
+      </Helmet>
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-white">
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 py-32 relative overflow-hidden">
@@ -290,6 +296,7 @@ const FeaturesPage = () => {
         </div>
       </section>
     </div>
+    </>
   );
 };
 

@@ -11,6 +11,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { axiosInstance } from "../../axiosUtils";
 import smily from "../../assets/smily.gif";
+import {Helmet} from 'react-helmet-async';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -53,6 +54,11 @@ const Register = () => {
   };
 
   return (
+    <>
+      <Helmet>
+        <title>Start Free Trial – SkillMatrix AI | AI Hiring Software Signup</title>
+        <meta name="description" content="Create your free SkillMatrix AI account and explore all features resume parsing, skill matching, and dashboards. No credit card required. Sign up for your free trial now!" />
+      </Helmet>
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 flex items-center justify-center p-4">
       {/* Loading Overlay */}
       {loading && (
@@ -327,6 +333,7 @@ const Register = () => {
         </motion.div>
       </motion.div>
     </div>
+    </>
   );
 };
 

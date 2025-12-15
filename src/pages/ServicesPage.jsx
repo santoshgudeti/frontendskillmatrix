@@ -9,6 +9,7 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { servicesData } from '../data/servicesData';
+import { Helmet } from 'react-helmet-async';
 
 const ServicesPage = () => {
   const fadeInUp = {
@@ -21,6 +22,11 @@ const ServicesPage = () => {
   const services = servicesData;
 
   return (
+     <>
+      <Helmet>
+        <title>AI Recruitment Services | SkillMatrixAI – Streamline Hiring with Smart Talent Matching</title>
+        <meta name="description" content="SkillMatrix AI offers JD & resume matching, automated assessments, analytics, and interview scheduling. Boost hiring quality, cut HR costs, book a demo now." />
+      </Helmet>
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-white">
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 py-32 relative overflow-hidden">
@@ -292,6 +298,7 @@ const ServicesPage = () => {
         </div>
       </section>
     </div>
+    </>
   );
 };
 

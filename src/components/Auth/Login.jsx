@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash, faSpinner, faCheckCircle, faUser, faLock, faArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { axiosInstance } from '../../axiosUtils';
 import WelcomeModal from '../modals/WelcomeModal';
+import { Helmet } from 'react-helmet-async';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -48,6 +49,11 @@ const Login = () => {
   };
 
   return (
+    <>
+      <Helmet>
+        <title>Login to SkillMatrix AI – Access Your AI Hiring Dashboard</title>
+        <meta name="description" content="Log in to SkillMatrix AI to manage candidates, job postings, skill scores, and recruitment analytics. Secure dashboard for HR teams and recruiters. Sign in now!" />
+      </Helmet>
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 flex items-center justify-center p-4">
       {/* Loading Overlay */}
       {loading && (
@@ -221,6 +227,7 @@ const Login = () => {
         </motion.div>
       </motion.div>
     </div>
+     </>
   );
 };
 

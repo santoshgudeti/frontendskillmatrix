@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Helmet } from 'react-helmet-async';
 import {
   FiFileText, FiSearch, FiUserCheck, FiVideo, FiCheckCircle,
   FiAward, FiArrowRight, FiPlayCircle
@@ -16,6 +17,12 @@ const HowItWorksPage = () => {
   };
 
   return (
+   <>
+      <Helmet>
+        <title>How SkillMatrix AI Works – AI Hiring Process Explained | Quick Results</title>
+        <meta name="description" content="SkillMatrix AI simplifies hiring with an AI-driven workflow from job posting to offer letter. Save time with automated candidate matching and improve hiring quality. Get started now." />
+      </Helmet>
+
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 py-32 relative overflow-hidden">
@@ -335,6 +342,7 @@ const HowItWorksPage = () => {
         </div>
       </section>
     </div>
+    </>
   );
 };
 

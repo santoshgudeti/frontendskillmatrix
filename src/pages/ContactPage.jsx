@@ -8,6 +8,8 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import axios from 'axios';
+import { Helmet } from 'react-helmet-async';
+
 
 const ContactPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,6 +111,11 @@ const ContactPage = () => {
     }
   };
   return (
+    <>
+      <Helmet>
+        <title>Contact SkillMatrix AI – Schedule a Demo & Get Support</title>
+        <meta name="description" content="Have questions or want a demo? Contact the SkillMatrix AI team expert support for onboarding, sales, and technical help. Talk to us and accelerate your hiring process today!" />
+      </Helmet>
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-white">
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 py-32 relative overflow-hidden">
@@ -379,6 +386,7 @@ const ContactPage = () => {
         </div>
       </section>
     </div>
+     </>
   );
 };
 

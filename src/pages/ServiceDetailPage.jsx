@@ -9,6 +9,7 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { servicesData } from '../data/servicesData';
+import { Helmet } from 'react-helmet-async';
 
 const ServiceDetailPage = () => {
   const { serviceId } = useParams();
@@ -70,6 +71,54 @@ const ServiceDetailPage = () => {
     
     return colors[color]?.[shade] || '#6b7280'; // fallback to gray
   };
+ // Find the current service
+  const currentService = servicesData.find(service => service.id === serviceId);
+  
+  // Service-specific SEO data
+  const serviceSEOData = {
+    'jd-resume-upload': {
+      title: 'JD Resume Upload Service | AI Job Match & Resume Screening – SkillMatrixAI',
+      description: 'Boost hiring with JD & resume upload AI-powered matching, ATS-ready screening, and skill scoring. Get top candidate shortlists faster. Start a free trial now.'
+    },
+    'sending-assessment': {
+      title: 'AI Sending Assessment Service | Automate Candidate Evaluation – SkillMatrixAI',
+      description: 'Speed up hiring with AI-powered assessments, send skill tests, get instant scores, and shortlist the best candidates faster. Start your free trial today.'
+    },
+    'candidate-assessment': {
+      title: 'AI Candidate Assessment Services | SkillMatrixAI – Smart Talent Evaluation & Scoring',
+      description: 'Boost hiring with AI candidate assessments automated skill tests, performance scores, and detailed insights to find top talent faster. Start your free trial today.'
+    },
+    'assessment-reports': {
+      title: 'AI Assessment Reports Service | Data‑Driven Candidate Insights – SkillMatrixAI',
+      description: 'Get AI assessment reports with SkillMatrixAI skill-by-skill scoring, performance insights, and role-fit analytics to hire faster. Start a free trial or book demo today.'
+    },
+    'interview-scheduling': {
+      title: 'AI‑Powered Interview Scheduling & Coordination – SkillMatrixAI',
+      description: 'Speed up hiring with AI interview scheduling auto-sync calendars, match availability, send reminders, and reduce no-shows. Improve candidate experience and start your free trial now.'
+    },
+    'candidate-upload': {
+      title: 'AI Candidate Upload Service | Bulk Resume Upload & Automated Parsing',
+      description: 'Accelerate your hiring workflow with bulk candidate upload and AI resume parsing auto-extract candidate skills, organize profiles, and power faster shortlisting with AI. Get started with a free trial today!'
+    },
+    'document-verification': {
+      title: 'Automated AI Document Verification for Recruitment – SkillMatrixAI',
+      description: 'Protect hiring with AI document verification auto-check IDs, certificates, and credentials to prevent fraud, ensure compliance, and speed onboarding. Start your free trial today.'
+    },
+    'offer-letter-automation': {
+      title: 'AI Offer Letter Automation Service | Fast & Compliant Hiring Docs – SkillMatrixAI',
+      description: 'Streamline onboarding with AI offer letter automation easy templates, instant delivery, and compliance checks to hire faster. Start your free trial or book a demo now.'
+    },
+    'job-posting-portal': {
+      title: 'Job Posting Portal | SkillMatrixAI – Public Job Listings & Candidate Applications',
+      description: 'Create and publish job postings with a unique public URL that candidates can access to apply directly. Share jobs across platforms and receive all applications instantly in your HR dashboard.'
+    },
+    'applicant-intake': {
+      title: 'Applicant Intake Dashboard | SkillMatrixAI – Manage Job Applications Efficiently',
+      description: 'View and manage all applications submitted through public job postings. Access candidate details, download resumes, and move applicants directly into your ATS workflow.'
+    }
+  };
+
+  // ... existing code ...
 
   // Extended service details (features, benefits, use cases)
 const serviceDetails = {
@@ -606,6 +655,13 @@ const serviceDetails = {
   };
 
   return (
+
+<>
+      <Helmet>
+        <title>{serviceSEOData[serviceId]?.title || 'AI Recruitment Services | SkillMatrixAI'}</title>
+        <meta name="description" content={serviceSEOData[serviceId]?.description || 'Explore SkillMatrix AI services for smarter recruitment'} />
+      </Helmet>
+
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section with Video */}
       <section className={`relative bg-gradient-to-r ${service.color} py-16 md:py-24 overflow-hidden`}>
@@ -851,6 +907,7 @@ const serviceDetails = {
         </div>
       </section>
     </div>
+    </>
   );
 };
 

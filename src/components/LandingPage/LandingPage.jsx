@@ -11,6 +11,7 @@ import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Avatar } from '../ui/Avatar';
+import { Helmet } from 'react-helmet-async';
 
 const LandingPage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -71,6 +72,11 @@ const LandingPage = () => {
   };
 
   return (
+    <>
+     <Helmet>
+        <title>SkillMatrix AI – Best AI Recruitment Software for Smart Hiring | Free Trial</title>
+        <meta name="description" content="Get SkillMatrix AI recruitment software to speed up hiring with resume parsing, candidate matching, and analytics. Improve efficiency and start your free trial." />
+      </Helmet>
     <div className="min-h-screen bg-white">
       {/* Revolutionary Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 pt-32 pb-40">
@@ -1026,6 +1032,7 @@ const LandingPage = () => {
       {/* Demo Videos Section */}
       
     </div>
+    </>
   )
 }
 
