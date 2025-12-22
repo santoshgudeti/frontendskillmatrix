@@ -40,6 +40,7 @@ export default defineConfig(({ mode }) => {
     ],
     server: {
       host: true, // Allow external connections
+      port: 3000,
       proxy: {
         '/api': {
           target: env.VITE_BACKEND_URL || 'http://localhost:5000',
@@ -47,6 +48,12 @@ export default defineConfig(({ mode }) => {
           secure: false,
         }
       }
+    },
+    preview: {
+      host: true, // Allow external connections
+      port: 3000,
+      strictPort: true, // Fail if port is already in use
+      cors: true // Enable CORS for API calls
     },
     build: {
       // Ensure public directory is copied

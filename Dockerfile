@@ -48,28 +48,27 @@ RUN npm run build && \
     echo "Checking for sitemap.xml:" && \
     ls -la dist/sitemap.xml || echo "WARNING: sitemap.xml not found!"
 
-# Production stage - Serve static files with Node.js
+# Production stage - Serve with Vite Preview
 FROM base AS production
-
-# Install serve globally (specific version for stability)
-RUN npm install -g serve@14 --legacy-peer-deps && npm cache clean --force
 
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /app/dist
 
-WORKDIR /app/dist
+# Copy package.json and node_modules (needed for vite preview)
+COPY --from=builder /app/package.json /app/package.json
+COPY --from=builder /app/node_modules /app/node_modules
+
+WORKDIR /app
 
 # Create non-root user and set permissions
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup && \
-    chown -R appuser:appgroup /app/dist
+    chown -R appuser:appgroup /app
 
 # Switch to non-root user
 USER appuser
 
 EXPOSE 3000
 
-# Serve with SPA support (-s flag), CORS enabled, and proper routing
-# -s . : Serve as Single Page App (all routes → index.html)
-# --cors : Enable CORS for API calls
-# --no-clipboard : Disable clipboard (not needed in container)
-CMD ["serve", "-s", ".", "-l", "3000", "--cors", "--no-clipboard"]
+# Use Vite's preview server for production
+# Preview server properly handles SPA routing and serves static files
+CMD ["npx", "vite", "preview", "--host", "0.0.0.0", "--port", "3000"]
