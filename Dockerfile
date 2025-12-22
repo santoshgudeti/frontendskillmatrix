@@ -5,13 +5,15 @@ FROM node:20-alpine AS base
 WORKDIR /app
 
 # Install system dependencies
-RUN apk add --no-cache \
-    dumb-init \
-    && rm -rf /var/cache/apk/*
+RUN apk add --no-cache curl && rm -rf /var/cache/apk/*
 
 # Set environment variables
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV npm_config_fetch_timeout=120000
+ENV npm_config_fetch_retry_mintimeout=20000
+ENV npm_config_fetch_retry_maxtimeout=120000
+ENV npm_config_fetch_retries=10
 
 # Dependencies stage - Install both dependencies and devDependencies for building
 FROM base AS dependencies
@@ -28,52 +30,46 @@ FROM dependencies AS builder
 # Copy source code
 COPY . .
 
-# Set build-time environment variables
-ARG VITE_BACKEND_URL
-ARG VITE_APP_TITLE
-ARG VITE_APP_DESCRIPTION
+# Set build-time environment variables with defaults
+ARG VITE_BACKEND_URL=http://localhost:5000
+ARG VITE_APP_TITLE="SkillMatrix ATS"
+ARG VITE_APP_DESCRIPTION="AI-Powered Applicant Tracking System"
 
-# Set environment variables for build
+# CRITICAL: Set environment variables for Vite build
+# Vite bakes these into the bundle at BUILD TIME
 ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
-ENV VITE_APP_TITLE=${VITE_APP_TITLE:-"SkillMatrix ATS"}
-ENV VITE_APP_DESCRIPTION=${VITE_APP_DESCRIPTION:-"AI-Powered Applicant Tracking System"}
+ENV VITE_APP_TITLE=${VITE_APP_TITLE}
+ENV VITE_APP_DESCRIPTION=${VITE_APP_DESCRIPTION}
 
-# Build the application
-RUN npm run build
+# Build the application (Vite will copy public/ to dist/ automatically)
+RUN npm run build && \
+    echo "Build complete. Checking dist contents:" && \
+    ls -la dist/ && \
+    echo "Checking for sitemap.xml:" && \
+    ls -la dist/sitemap.xml || echo "WARNING: sitemap.xml not found!"
 
 # Production stage - Serve static files with Node.js
 FROM base AS production
 
-# Install serve globally to serve static files
-RUN npm install -g serve
-
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init curl
+# Install serve globally (specific version for stability)
+RUN npm install -g serve@14 --legacy-peer-deps && npm cache clean --force
 
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /app/dist
 
-# Set working directory to dist folder
 WORKDIR /app/dist
 
-# Create non-root user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-
-# Set proper permissions
-RUN chown -R appuser:appgroup /app/dist
+# Create non-root user and set permissions
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup && \
+    chown -R appuser:appgroup /app/dist
 
 # Switch to non-root user
 USER appuser
 
-# Health check using curl
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/ || exit 1
-
-# Expose port
 EXPOSE 3000
 
-# Use dumb-init to handle signals properly
-ENTRYPOINT ["dumb-init", "--"]
-
-# Serve the application
-CMD ["serve", "-s", ".", "-l", "3000"]
+# Serve with SPA support (-s flag), CORS enabled, and proper routing
+# -s . : Serve as Single Page App (all routes → index.html)
+# --cors : Enable CORS for API calls
+# --no-clipboard : Disable clipboard (not needed in container)
+CMD ["serve", "-s", ".", "-l", "3000", "--cors", "--no-clipboard"]
